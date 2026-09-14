@@ -38,7 +38,9 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/Teamc00lgui/007n7-s-h
 
 ## Features
 
-_TBA_
+- CoreGuard
+- Professional code executor
+- Custom settings
 
 ## Credits
 
