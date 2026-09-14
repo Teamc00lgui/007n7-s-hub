@@ -138,6 +138,26 @@ local function IsMobile()
     return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 end
 
+local function BindAutoScroll(ScrollingFrame, Content, Layout)
+    local function Update()
+        local ContentHeight = Layout.AbsoluteContentSize.Y + 12
+        local ViewportHeight = ScrollingFrame.AbsoluteSize.Y
+
+        ScrollingFrame.CanvasSize = UDim2.fromOffset(
+            0,
+            math.max(ContentHeight, ViewportHeight)
+        )
+    end
+
+    Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(Update)
+    ScrollingFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(Update)
+    Content:GetPropertyChangedSignal("AbsoluteSize"):Connect(Update)
+
+    task.defer(Update)
+
+    return Update
+end
+
 local ScreenGui = Create("ScreenGui", {
     Name = "007n7sHub",
     ResetOnSpawn = false,
@@ -693,7 +713,47 @@ local ExecutionPage = Create("CanvasGroup", {
     Position = UDim2.fromScale(0, 0),
     BackgroundTransparency = 1,
     GroupTransparency = 0,
+    ClipsDescendants = true,
     Parent = MainArea
+})
+
+local ExecutionScroll = Create("ScrollingFrame", {
+    Name = "ExecutionScroll",
+    Size = UDim2.fromScale(1, 1),
+    Position = UDim2.fromScale(0, 0),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    CanvasSize = UDim2.fromOffset(0, 0),
+    ScrollingDirection = Enum.ScrollingDirection.Y,
+    ScrollBarThickness = 4,
+    ScrollBarImageColor3 = Config.Colors.Border,
+    ScrollBarImageTransparency = 0.15,
+    ScrollingEnabled = true,
+    ClipsDescendants = true,
+    AutomaticCanvasSize = Enum.AutomaticSize.None,
+    Parent = ExecutionPage
+})
+
+local ExecutionContent = Create("Frame", {
+    Name = "ExecutionContent",
+    Size = UDim2.new(1, -8, 0, 0),
+    AutomaticSize = Enum.AutomaticSize.Y,
+    BackgroundTransparency = 1,
+    Parent = ExecutionScroll
+})
+
+local ExecutionLayout = Create("UIListLayout", {
+    Padding = UDim.new(0, 0),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Parent = ExecutionContent
+})
+
+Create("UIPadding", {
+    PaddingLeft = UDim.new(0, 14),
+    PaddingRight = UDim.new(0, 8),
+    PaddingTop = UDim.new(0, 11),
+    PaddingBottom = UDim.new(0, 12),
+    Parent = ExecutionContent
 })
 
 local ExecutionScale = Create("UIScale", {
@@ -710,7 +770,7 @@ local PageTitle = Create("TextLabel", {
     TextSize = 20,
     Font = Enum.Font.GothamBold,
     TextXAlignment = Enum.TextXAlignment.Left,
-    Parent = ExecutionPage
+    Parent = ExecutionContent
 })
 
 local PageDescription = Create("TextLabel", {
@@ -722,13 +782,13 @@ local PageDescription = Create("TextLabel", {
     TextSize = 11,
     Font = Enum.Font.Gotham,
     TextXAlignment = Enum.TextXAlignment.Left,
-    Parent = ExecutionPage
+    Parent = ExecutionContent
 })
 
 local Editor = Create("TextBox", {
     Name = "Editor",
-    Size = UDim2.new(1, -32, 1, -116),
-    Position = UDim2.fromOffset(16, 68),
+    Size = UDim2.new(1, -22, 0, 230),
+    LayoutOrder = 3,
     BackgroundColor3 = Color3.fromRGB(10, 12, 15),
     BorderSizePixel = 0,
     ClearTextOnFocus = false,
@@ -742,7 +802,7 @@ local Editor = Create("TextBox", {
     TextXAlignment = Enum.TextXAlignment.Left,
     TextYAlignment = Enum.TextYAlignment.Top,
     TextWrapped = false,
-    Parent = ExecutionPage
+    Parent = ExecutionContent
 })
 
 AddCorner(Editor, 10)
@@ -759,7 +819,7 @@ Create("UIPadding", {
 local ExecuteButton = Create("TextButton", {
     Name = "Execute",
     Size = UDim2.fromOffset(105, 36),
-    Position = UDim2.new(1, -121, 1, -48),
+    LayoutOrder = 4,
     BackgroundColor3 = Config.Colors.Accent,
     BorderSizePixel = 0,
     AutoButtonColor = false,
@@ -767,7 +827,7 @@ local ExecuteButton = Create("TextButton", {
     TextColor3 = Color3.fromRGB(255, 255, 255),
     TextSize = 12,
     Font = Enum.Font.GothamBold,
-    Parent = ExecutionPage
+    Parent = ExecutionContent
 })
 
 AddCorner(ExecuteButton, 9)
@@ -779,6 +839,7 @@ local SettingsPage = Create("CanvasGroup", {
     BackgroundTransparency = 1,
     GroupTransparency = 1,
     Visible = false,
+    ClipsDescendants = true,
     Parent = MainArea
 })
 
@@ -811,13 +872,50 @@ local SettingsDescription = Create("TextLabel", {
     Parent = SettingsPage
 })
 
+local SettingsScroll = Create("ScrollingFrame", {
+    Name = "SettingsScroll",
+    Size = UDim2.new(1, -28, 1, -58),
+    Position = UDim2.fromOffset(14, 58),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    CanvasSize = UDim2.fromOffset(0, 0),
+    ScrollingDirection = Enum.ScrollingDirection.Y,
+    ScrollBarThickness = 4,
+    ScrollBarImageColor3 = Config.Colors.Border,
+    ScrollBarImageTransparency = 0.15,
+    ScrollingEnabled = true,
+    ClipsDescendants = true,
+    AutomaticCanvasSize = Enum.AutomaticSize.None,
+    Parent = SettingsPage
+})
+
+local SettingsContent = Create("Frame", {
+    Name = "SettingsContent",
+    Size = UDim2.new(1, -8, 0, 0),
+    AutomaticSize = Enum.AutomaticSize.Y,
+    BackgroundTransparency = 1,
+    Parent = SettingsScroll
+})
+
+local SettingsLayout = Create("UIListLayout", {
+    Padding = UDim.new(0, 10),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Parent = SettingsContent
+})
+
+Create("UIPadding", {
+    PaddingRight = UDim.new(0, 8),
+    PaddingBottom = UDim.new(0, 12),
+    Parent = SettingsContent
+})
+
 local AboutCard = Create("Frame", {
     Name = "AboutCard",
-    Size = UDim2.new(1, -32, 0, 110),
-    Position = UDim2.fromOffset(16, 70),
+    Size = UDim2.new(1, 0, 0, 110),
+    LayoutOrder = 1,
     BackgroundColor3 = Config.Colors.Surface,
     BorderSizePixel = 0,
-    Parent = SettingsPage
+    Parent = SettingsContent
 })
 
 AddCorner(AboutCard, 10)
@@ -861,11 +959,11 @@ local AboutCreator = Create("TextLabel", {
 
 local CoreGuardCard = Create("Frame", {
     Name = "CoreGuardCard",
-    Size = UDim2.new(1, -32, 0, 172),
-    Position = UDim2.fromOffset(16, 190),
+    Size = UDim2.new(1, 0, 0, 172),
+    LayoutOrder = 2,
     BackgroundColor3 = Config.Colors.Surface,
     BorderSizePixel = 0,
-    Parent = SettingsPage
+    Parent = SettingsContent
 })
 
 AddCorner(CoreGuardCard, 10)
@@ -1009,6 +1107,18 @@ CoreGuardRecover.MouseButton1Click:Connect(function()
 end)
 
 UpdateCoreGuardStatus()
+
+local UpdateExecutionScroll = BindAutoScroll(
+    ExecutionScroll,
+    ExecutionContent,
+    ExecutionLayout
+)
+
+local UpdateSettingsScroll = BindAutoScroll(
+    SettingsScroll,
+    SettingsContent,
+    SettingsLayout
+)
 
 local MiniButton = Create("TextButton", {
     Name = "ReopenButton",
@@ -1174,29 +1284,38 @@ local function UpdateLayout()
     Creator.Position = UDim2.new(0, 6, 1, -40)
     Creator.TextSize = Compact and 7 or 9
 
-    PageTitle.Position = UDim2.fromOffset(14, 11)
-    PageTitle.TextSize = Compact and 16 or 20
+PageTitle.TextSize = Compact and 16 or 20
+PageDescription.TextSize = Compact and 9 or 11
 
-    PageDescription.Position = UDim2.fromOffset(14, 34)
-    PageDescription.TextSize = Compact and 9 or 11
+local EditorHeight = math.max(
+    150,
+    ExecutionScroll.AbsoluteSize.Y - (Compact and 112 or 125)
+)
 
-    Editor.Position = UDim2.fromOffset(14, 58)
-    Editor.Size = UDim2.new(1, -28, 1, -101)
-    Editor.TextSize = Compact and 10 or 13
+Editor.Size = UDim2.new(
+    1,
+    -22,
+    0,
+    EditorHeight
+)
 
-    ExecuteButton.Size = UDim2.fromOffset(
-        Compact and 82 or 105,
-        Compact and 31 or 36
-    )
+Editor.TextSize = Compact and 10 or 13
 
-    ExecuteButton.Position = UDim2.new(
-        1,
-        -(Compact and 96 or 121),
-        1,
-        -(Compact and 40 or 48)
-    )
+ExecuteButton.Size = UDim2.fromOffset(
+    Compact and 82 or 105,
+    Compact and 31 or 36
+)
 
-    ExecuteButton.TextSize = Compact and 10 or 12
+ExecuteButton.TextSize = Compact and 10 or 12
+
+ExecuteButton.Position = UDim2.new(
+    1,
+    -(Compact and 96 or 121),
+    1,
+    -(Compact and 40 or 48)
+)
+
+ExecuteButton.TextSize = Compact and 10 or 12
 
     SettingsTitle.Position = UDim2.fromOffset(14, 11)
     SettingsTitle.TextSize = Compact and 16 or 20
@@ -1204,8 +1323,19 @@ local function UpdateLayout()
     SettingsDescription.Position = UDim2.fromOffset(14, 34)
     SettingsDescription.TextSize = Compact and 9 or 11
 
-    AboutCard.Position = UDim2.fromOffset(14, 58)
-    AboutCard.Size = UDim2.new(1, -28, 0, Compact and 95 or 110)
+    AboutCard.Size = UDim2.new(
+    1,
+    0,
+    0,
+    Compact and 95 or 110
+)
+
+    CoreGuardCard.Size = UDim2.new(
+    1,
+    0,
+    0,
+    Compact and 168 or 172
+)
 
     AboutTitle.Position = UDim2.fromOffset(11, 10)
     AboutTitle.TextSize = Compact and 12 or 14
@@ -1215,6 +1345,11 @@ local function UpdateLayout()
 
     AboutCreator.Position = UDim2.fromOffset(11, 56)
     AboutCreator.TextSize = Compact and 9 or 11
+
+task.defer(function()
+    UpdateExecutionScroll()
+    UpdateSettingsScroll()
+end)
 end
 
 local function CollapseWindow()
