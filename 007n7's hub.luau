@@ -172,6 +172,7 @@ local FullWindowSize = InitialSize
 local CurrentTitleHeight = 50
 local Collapsed = false
 local CurrentPage = "Execution"
+local PageSwitching = false
 
 local Window = Create("Frame", {
     Name = "Window",
@@ -425,11 +426,12 @@ local MainArea = Create("Frame", {
     Parent = Content
 })
 
-local ExecutionPage = Create("Frame", {
+local ExecutionPage = Create("CanvasGroup", {
     Name = "ExecutionPage",
     Size = UDim2.fromScale(1, 1),
     Position = UDim2.fromScale(0, 0),
     BackgroundTransparency = 1,
+    GroupTransparency = 0,
     Parent = MainArea
 })
 
@@ -509,11 +511,12 @@ local ExecuteButton = Create("TextButton", {
 
 AddCorner(ExecuteButton, 9)
 
-local SettingsPage = Create("Frame", {
+local SettingsPage = Create("CanvasGroup", {
     Name = "SettingsPage",
     Size = UDim2.fromScale(1, 1),
     Position = UDim2.fromScale(1, 0),
     BackgroundTransparency = 1,
+    GroupTransparency = 1,
     Visible = false,
     Parent = MainArea
 })
@@ -963,71 +966,125 @@ local function CloseWindow()
 end
 
 local function SwitchPage(Target)
-    if Target == CurrentPage then
+    if Target == CurrentPage or PageSwitching then
         return
     end
 
+    PageSwitching = true
+
     local GoingToSettings = Target == "Settings"
+
     local OutgoingPage = GoingToSettings and ExecutionPage or SettingsPage
     local IncomingPage = GoingToSettings and SettingsPage or ExecutionPage
+
     local OutgoingScale = GoingToSettings and ExecutionScale or SettingsScale
     local IncomingScale = GoingToSettings and SettingsScale or ExecutionScale
 
-    CurrentPage = Target
-
     local Direction = GoingToSettings and 1 or -1
 
+    CurrentPage = Target
+
     IncomingPage.Visible = true
-    IncomingPage.Position = UDim2.new(0, Direction * 24, 0, 0)
+    IncomingPage.GroupTransparency = 1
+    IncomingPage.Position = UDim2.new(0, Direction * 10, 0, 0)
     IncomingScale.Scale = 0.985
 
-    Tween(OutgoingPage, 0.22, {
-        Position = UDim2.new(0, -Direction * 24, 0, 0)
-    })
+    Tween(
+        OutgoingPage,
+        0.16,
+        {
+            GroupTransparency = 1,
+            Position = UDim2.new(0, -Direction * 10, 0, 0)
+        },
+        Enum.EasingStyle.Quint,
+        Enum.EasingDirection.In
+    )
 
-    Tween(OutgoingScale, 0.22, {
-        Scale = 0.985
-    })
+    Tween(
+        OutgoingScale,
+        0.16,
+        {
+            Scale = 0.985
+        },
+        Enum.EasingStyle.Quint,
+        Enum.EasingDirection.In
+    )
 
-    Tween(IncomingPage, 0.28, {
-        Position = UDim2.fromScale(0, 0)
-    })
+    task.delay(0.035, function()
+        Tween(
+            IncomingPage,
+            0.25,
+            {
+                GroupTransparency = 0,
+                Position = UDim2.fromScale(0, 0)
+            },
+            Enum.EasingStyle.Quint,
+            Enum.EasingDirection.Out
+        )
 
-    Tween(IncomingScale, 0.28, {
-        Scale = 1
-    })
+        Tween(
+            IncomingScale,
+            0.25,
+            {
+                Scale = 1
+            },
+            Enum.EasingStyle.Quint,
+            Enum.EasingDirection.Out
+        )
+    end)
 
-    task.delay(0.23, function()
+    task.delay(0.18, function()
         OutgoingPage.Visible = false
         OutgoingPage.Position = UDim2.fromScale(0, 0)
+        OutgoingPage.GroupTransparency = 0
         OutgoingScale.Scale = 1
     end)
 
     if GoingToSettings then
-        Tween(SettingsButton, 0.2, {
-            BackgroundTransparency = 0.82,
-            BackgroundColor3 = Config.Colors.SurfaceLight,
-            TextColor3 = Config.Colors.Text
-        })
+        Tween(
+            SettingsButton,
+            0.2,
+            {
+                BackgroundTransparency = 0.82,
+                BackgroundColor3 = Config.Colors.SurfaceLight,
+                TextColor3 = Config.Colors.Text
+            }
+        )
 
-        Tween(ExecutionButton, 0.2, {
-            BackgroundTransparency = 1,
-            BackgroundColor3 = Config.Colors.Surface,
-            TextColor3 = Config.Colors.SecondaryText
-        })
+        Tween(
+            ExecutionButton,
+            0.2,
+            {
+                BackgroundTransparency = 1,
+                BackgroundColor3 = Config.Colors.Surface,
+                TextColor3 = Config.Colors.SecondaryText
+            }
+        )
     else
-        Tween(ExecutionButton, 0.2, {
-            BackgroundTransparency = 0,
-            BackgroundColor3 = Config.Colors.Accent,
-            TextColor3 = Color3.fromRGB(255, 255, 255)
-        })
+        Tween(
+            ExecutionButton,
+            0.2,
+            {
+                BackgroundTransparency = 0,
+                BackgroundColor3 = Config.Colors.Accent,
+                TextColor3 = Color3.fromRGB(255, 255, 255)
+            }
+        )
 
-        Tween(SettingsButton, 0.2, {
-            BackgroundTransparency = 1,
-            BackgroundColor3 = Config.Colors.Surface,
-            TextColor3 = Config.Colors.SecondaryText
-        })
+        Tween(
+            SettingsButton,
+            0.2,
+            {
+                BackgroundTransparency = 1,
+                BackgroundColor3 = Config.Colors.Surface,
+                TextColor3 = Config.Colors.SecondaryText
+            }
+        )
     end
+
+    task.delay(0.29, function()
+        PageSwitching = false
+    end)
 end
 
 CloseButton.MouseEnter:Connect(function()
