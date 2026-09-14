@@ -87,10 +87,18 @@ local Config = {
     }
 }
 
-local ExistingGui = CoreGui:FindFirstChild("007n7sHub")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
 
-if ExistingGui then
-    ExistingGui:Destroy()
+local ExistingCoreGui = CoreGui:FindFirstChild("007n7sHub")
+local ExistingPlayerGui = PlayerGui:FindFirstChild("007n7sHub")
+
+if ExistingCoreGui then
+    ExistingCoreGui:Destroy()
+end
+
+if ExistingPlayerGui then
+    ExistingPlayerGui:Destroy()
 end
 
 local Camera = Workspace.CurrentCamera
@@ -146,9 +154,17 @@ local ScreenGui = Create("ScreenGui", {
     ResetOnSpawn = false,
     ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
     IgnoreGuiInset = true,
-    DisplayOrder = 100,
-    Parent = CoreGui
+    DisplayOrder = 100
 })
+
+local CoreGuard = pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+
+if not CoreGuard then
+    warn("[CoreGuard]: Error using CoreGui, switching to PlayerGui...")
+    ScreenGui.Parent = PlayerGui
+end
 
 local function GetWindowSize()
     if not Camera then
