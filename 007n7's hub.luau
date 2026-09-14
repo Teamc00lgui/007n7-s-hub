@@ -141,6 +141,14 @@ local function IsMobile()
     return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 end
 
+local ScreenGui = Create("ScreenGui", {
+    Name = "007n7sHub",
+    ResetOnSpawn = false,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    IgnoreGuiInset = true,
+    Parent = CoreGui
+})
+
 local function GetWindowSize()
     if not Camera then
         return Config.DesktopSize
@@ -157,14 +165,6 @@ local function GetWindowSize()
 
     return Config.DesktopSize
 end
-
-local ScreenGui = Create("ScreenGui", {
-    Name = "007n7sHub",
-    ResetOnSpawn = false,
-    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-    IgnoreGuiInset = true,
-    Parent = CoreGui
-})
 
 local InitialSize = GetWindowSize()
 
@@ -214,15 +214,6 @@ local TitleBar = Create("Frame", {
 })
 
 AddCorner(TitleBar, 14)
-
-local TitleBarCover = Create("Frame", {
-    Size = UDim2.new(1, 0, 0, 16),
-    Position = UDim2.new(0, 0, 1, -16),
-    BackgroundColor3 = Config.Colors.Accent,
-    BorderSizePixel = 0,
-    ZIndex = 5,
-    Parent = TitleBar
-})
 
 local Title = Create("TextLabel", {
     Name = "Title",
@@ -391,12 +382,14 @@ local MainArea = Create("Frame", {
     Size = UDim2.new(1, -135, 1, 0),
     Position = UDim2.fromOffset(135, 0),
     BackgroundTransparency = 1,
+    ClipsDescendants = true,
     Parent = Content
 })
 
 local ExecutionPage = Create("Frame", {
     Name = "ExecutionPage",
     Size = UDim2.fromScale(1, 1),
+    Position = UDim2.fromScale(0, 0),
     BackgroundTransparency = 1,
     Parent = MainArea
 })
@@ -475,6 +468,7 @@ AddCorner(ExecuteButton, 9)
 local SettingsPage = Create("Frame", {
     Name = "SettingsPage",
     Size = UDim2.fromScale(1, 1),
+    Position = UDim2.fromScale(1, 0),
     BackgroundTransparency = 1,
     Visible = false,
     Parent = MainArea
@@ -615,10 +609,7 @@ local function UpdateLayout()
         WindowSize = Config.DesktopSize
     end
 
-    Window.Size = UDim2.fromOffset(
-        WindowSize.X,
-        WindowSize.Y
-    )
+    Window.Size = UDim2.fromOffset(WindowSize.X, WindowSize.Y)
 
     local Compact = Mobile or WindowSize.X < 580
 
@@ -626,9 +617,6 @@ local function UpdateLayout()
     local SidebarWidth = Compact and 105 or 135
 
     TitleBar.Size = UDim2.new(1, 0, 0, TitleHeight)
-
-    TitleBarCover.Size = UDim2.new(1, 0, 0, 15)
-    TitleBarCover.Position = UDim2.new(0, 0, 1, -15)
 
     Title.Size = UDim2.new(1, -105, 0, 21)
     Title.Position = UDim2.fromOffset(13, 5)
@@ -747,7 +735,82 @@ local MiniButton = Create("TextButton", {
     Parent = ScreenGui
 })
 
-AddCorner(MiniButton, 9)
+AddCorner(MiniButton, 8)
+
+local MiniButtonStroke = AddStroke(
+    MiniButton,
+    Config.Colors.AccentHover,
+    1,
+    0.15
+)
+
+local MiniButtonInset = Create("Frame", {
+    Name = "SafeArea",
+    Size = UDim2.fromOffset(1, 1),
+    Position = UDim2.fromOffset(0, 0),
+    BackgroundTransparency = 1,
+    Parent = MiniButton
+})
+
+local function UpdateMiniButtonPosition()
+    local TopLeftInset = GuiService:GetGuiInset()
+
+    MiniButton.Position = UDim2.fromOffset(
+        math.max(8, TopLeftInset.X + 8),
+        math.max(8, TopLeftInset.Y + 8)
+    )
+end
+
+local function SwitchPage(Target)
+    local GoingToSettings = Target == "Settings"
+    local CurrentPage = GoingToSettings and ExecutionPage or SettingsPage
+    local TargetPage = GoingToSettings and SettingsPage or ExecutionPage
+
+    if TargetPage.Visible then
+        return
+    end
+
+    TargetPage.Visible = true
+    TargetPage.Position = UDim2.fromScale(GoingToSettings and 1 or -1, 0)
+
+    Tween(CurrentPage, 0.28, {
+        Position = UDim2.fromScale(GoingToSettings and -1 or 1, 0)
+    })
+
+    Tween(TargetPage, 0.28, {
+        Position = UDim2.fromScale(0, 0)
+    })
+
+    if GoingToSettings then
+        Tween(SettingsButton, 0.2, {
+            BackgroundTransparency = 0.82,
+            BackgroundColor3 = Config.Colors.SurfaceLight,
+            TextColor3 = Config.Colors.Text
+        })
+
+        Tween(ExecutionButton, 0.2, {
+            BackgroundTransparency = 1,
+            BackgroundColor3 = Config.Colors.Surface,
+            TextColor3 = Config.Colors.SecondaryText
+        })
+    else
+        Tween(ExecutionButton, 0.2, {
+            BackgroundTransparency = 0,
+            BackgroundColor3 = Config.Colors.Accent,
+            TextColor3 = Color3.fromRGB(255, 255, 255)
+        })
+
+        Tween(SettingsButton, 0.2, {
+            BackgroundTransparency = 1,
+            BackgroundColor3 = Config.Colors.Surface,
+            TextColor3 = Config.Colors.SecondaryText
+        })
+    end
+
+    task.delay(0.3, function()
+        CurrentPage.Visible = false
+    end)
+end
 
 CloseButton.MouseEnter:Connect(function()
     Tween(CloseButton, 0.15, {
@@ -822,6 +885,8 @@ CloseButton.MouseButton1Click:Connect(function()
         MiniButton.Visible = true
         MiniButton.Size = UDim2.fromOffset(0, 0)
 
+        UpdateMiniButtonPosition()
+
         Tween(MiniButton, 0.25, {
             Size = UDim2.fromOffset(
                 Config.MinimizedSize,
@@ -835,11 +900,19 @@ MiniButton.MouseEnter:Connect(function()
     Tween(MiniButton, 0.15, {
         BackgroundColor3 = Config.Colors.AccentHover
     })
+
+    Tween(MiniButtonStroke, 0.15, {
+        Transparency = 0
+    })
 end)
 
 MiniButton.MouseLeave:Connect(function()
     Tween(MiniButton, 0.15, {
         BackgroundColor3 = Config.Colors.Accent
+    })
+
+    Tween(MiniButtonStroke, 0.15, {
+        Transparency = 0.15
     })
 end)
 
@@ -853,64 +926,91 @@ MiniButton.MouseButton1Click:Connect(function()
 end)
 
 MinimizeButton.MouseButton1Click:Connect(function()
-    HideWindow()
+    local CurrentHeight = Window.AbsoluteSize.Y
 
-    task.delay(0.22, function()
-        MiniButton.Visible = true
-        MiniButton.Size = UDim2.fromOffset(0, 0)
+    Tween(WindowScale, 0.25, {
+        Scale = 0.98
+    })
 
-        Tween(MiniButton, 0.25, {
+    task.delay(0.12, function()
+        Content.Visible = false
+
+        Tween(Window, 0.28, {
             Size = UDim2.fromOffset(
-                Config.MinimizedSize,
-                Config.MinimizedSize
+                math.max(190, Window.AbsoluteSize.X),
+                50
             )
         })
     end)
+
+    MinimizeButton.Text = "□"
+
+    Tween(MinimizeButton, 0.2, {
+        BackgroundTransparency = 0.72
+    })
+end)
+
+TitleBar.InputBegan:Connect(function(Input)
+    if MinimizeButton.Text ~= "□" then
+        return
+    end
+
+    if Input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and Input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    if Input.Position.X >= MinimizeButton.AbsolutePosition.X
+        and Input.Position.X <= MinimizeButton.AbsolutePosition.X + MinimizeButton.AbsoluteSize.X then
+        return
+    end
+
+    if Input.Position.X >= CloseButton.AbsolutePosition.X
+        and Input.Position.X <= CloseButton.AbsolutePosition.X + CloseButton.AbsoluteSize.X then
+        return
+    end
+
+    Content.Visible = true
+    Window.Size = UDim2.fromOffset(
+        GetWindowSize().X,
+        50
+    )
+
+    local TargetSize = GetWindowSize()
+
+    Tween(Window, 0.28, {
+        Size = UDim2.fromOffset(
+            TargetSize.X,
+            TargetSize.Y
+        )
+    })
+
+    MinimizeButton.Text = "—"
+
+    Tween(MinimizeButton, 0.2, {
+        BackgroundTransparency = 0.88
+    })
 end)
 
 ExecutionButton.MouseButton1Click:Connect(function()
-    if ExecutionPage.Visible then
-        return
-    end
-
-    SettingsPage.Visible = false
-    ExecutionPage.Visible = true
-
-    Tween(ExecutionButton, 0.2, {
-        BackgroundColor3 = Config.Colors.Accent,
-        TextColor3 = Color3.fromRGB(255, 255, 255)
-    })
-
-    Tween(SettingsButton, 0.2, {
-        BackgroundTransparency = 1,
-        TextColor3 = Config.Colors.SecondaryText
-    })
+    SwitchPage("Execution")
 end)
 
 SettingsButton.MouseButton1Click:Connect(function()
-    if SettingsPage.Visible then
-        return
-    end
-
-    ExecutionPage.Visible = false
-    SettingsPage.Visible = true
-
-    Tween(SettingsButton, 0.2, {
-        BackgroundTransparency = 0.82,
-        BackgroundColor3 = Config.Colors.SurfaceLight,
-        TextColor3 = Config.Colors.Text
-    })
-
-    Tween(ExecutionButton, 0.2, {
-        BackgroundColor3 = Config.Colors.Surface,
-        TextColor3 = Config.Colors.SecondaryText
-    })
+    SwitchPage("Settings")
 end)
 
 UpdateLayout()
+UpdateMiniButtonPosition()
 
 if Camera then
-    Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateLayout)
+    Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+        UpdateLayout()
+
+        if MiniButton.Visible then
+            UpdateMiniButtonPosition()
+        end
+    end)
 end
 
 Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
@@ -921,6 +1021,7 @@ Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
     end
 
     UpdateLayout()
+    UpdateMiniButtonPosition()
 end)
 
 ShowWindow()
