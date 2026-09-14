@@ -87,11 +87,8 @@ local Config = {
     }
 }
 
-local ExistingGui = CoreGui:FindFirstChild("007n7sHub")
-
-if ExistingGui then
-    ExistingGui:Destroy()
-end
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local Camera = Workspace.CurrentCamera
 
@@ -141,14 +138,298 @@ local function IsMobile()
     return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 end
 
+local function BindAutoScroll(ScrollingFrame, Content, Layout)
+    local function Update()
+        local ContentHeight = Layout.AbsoluteContentSize.Y + 12
+        local ViewportHeight = ScrollingFrame.AbsoluteSize.Y
+
+        ScrollingFrame.CanvasSize = UDim2.fromOffset(
+            0,
+            math.max(ContentHeight, ViewportHeight)
+        )
+    end
+
+    Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(Update)
+    ScrollingFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(Update)
+    Content:GetPropertyChangedSignal("AbsoluteSize"):Connect(Update)
+
+    task.defer(Update)
+
+    return Update
+end
+
 local ScreenGui = Create("ScreenGui", {
     Name = "007n7sHub",
     ResetOnSpawn = false,
     ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
     IgnoreGuiInset = true,
-    DisplayOrder = 100,
-    Parent = CoreGui
+    DisplayOrder = 100
 })
+
+local CoreGuard = {}
+
+CoreGuard.Name = "CoreGuard"
+CoreGuard.GuiName = "007n7sHub"
+CoreGuard.Container = nil
+CoreGuard.UsingCoreGui = false
+CoreGuard.Initialized = false
+CoreGuard.Recovering = false
+CoreGuard.MonitorConnection = nil
+CoreGuard.LastWarning = nil
+
+function CoreGuard:Log(Message)
+    warn("[CoreGuard]: " .. Message)
+end
+
+function CoreGuard:IsAccessible(Object)
+    if not Object then
+        return false
+    end
+
+    local Success = pcall(function()
+        Object:GetChildren()
+    end)
+
+    return Success
+end
+
+function CoreGuard:IsMounted(ScreenGui)
+    if not ScreenGui then
+        return false
+    end
+
+    local Success, Parent = pcall(function()
+        return ScreenGui.Parent
+    end)
+
+    if not Success then
+        return false
+    end
+
+    return Parent == self.Container
+end
+
+function CoreGuard:CanUseCoreGui()
+    return self:IsAccessible(CoreGui)
+end
+
+function CoreGuard:FindExisting(Container)
+    if not self:IsAccessible(Container) then
+        return nil
+    end
+
+    local Success, Existing = pcall(function()
+        return Container:FindFirstChild(self.GuiName)
+    end)
+
+    if not Success then
+        return nil
+    end
+
+    return Existing
+end
+
+function CoreGuard:RemoveExisting(Container, ProtectedGui)
+    local Existing = self:FindExisting(Container)
+
+    if not Existing or Existing == ProtectedGui then
+        return true
+    end
+
+    local Success = pcall(function()
+        Existing:Destroy()
+    end)
+
+    if not Success then
+        self:Log("Failed to remove an existing GUI instance.")
+    end
+
+    return Success
+end
+
+function CoreGuard:PrepareContainer(Container, ScreenGui)
+    if not self:IsAccessible(Container) then
+        return false
+    end
+
+    self:RemoveExisting(Container, ScreenGui)
+
+    return true
+end
+
+function CoreGuard:MountToCoreGui(ScreenGui)
+    if not self:CanUseCoreGui() then
+        return false
+    end
+
+    if not self:PrepareContainer(CoreGui, ScreenGui) then
+        return false
+    end
+
+    local Success = pcall(function()
+        ScreenGui.Parent = CoreGui
+    end)
+
+    if not Success then
+        return false
+    end
+
+    if ScreenGui.Parent ~= CoreGui then
+        return false
+    end
+
+    self.Container = CoreGui
+    self.UsingCoreGui = true
+
+    return true
+end
+
+function CoreGuard:MountToPlayerGui(ScreenGui)
+    if not self:IsAccessible(PlayerGui) then
+        return false
+    end
+
+    if not self:PrepareContainer(PlayerGui, ScreenGui) then
+        return false
+    end
+
+    local Success = pcall(function()
+        ScreenGui.Parent = PlayerGui
+    end)
+
+    if not Success then
+        return false
+    end
+
+    if ScreenGui.Parent ~= PlayerGui then
+        return false
+    end
+
+    self.Container = PlayerGui
+    self.UsingCoreGui = false
+
+    return true
+end
+
+function CoreGuard:Mount(ScreenGui)
+    if self.Initialized then
+        self:Log("Mount request ignored because CoreGuard is already initialized.")
+        return self:IsMounted(ScreenGui)
+    end
+
+    self.Initialized = true
+
+    if self:MountToCoreGui(ScreenGui) then
+        self:Log("CoreGui mounted successfully.")
+        return true
+    end
+
+    self.LastWarning = "CoreGui unavailable."
+
+    self:Log("Error using CoreGui, switching to PlayerGui...")
+
+    if self:MountToPlayerGui(ScreenGui) then
+        self:Log("PlayerGui fallback mounted successfully.")
+        return true
+    end
+
+    self:Log("Critical error: failed to mount GUI.")
+
+    return false
+end
+
+function CoreGuard:Recover(ScreenGui)
+    if self.Recovering then
+        return false
+    end
+
+    self.Recovering = true
+
+    local Recovered = false
+
+    if self.UsingCoreGui then
+        Recovered = self:MountToCoreGui(ScreenGui)
+
+        if not Recovered then
+            self:Log("CoreGui recovery failed, switching to PlayerGui...")
+
+            Recovered = self:MountToPlayerGui(ScreenGui)
+        end
+    else
+        Recovered = self:MountToCoreGui(ScreenGui)
+
+        if Recovered then
+            self:Log("CoreGui became available again.")
+        else
+            Recovered = self:MountToPlayerGui(ScreenGui)
+        end
+    end
+
+    if Recovered then
+        self:Log("GUI recovery completed.")
+    else
+        self:Log("GUI recovery failed.")
+    end
+
+    self.Recovering = false
+
+    return Recovered
+end
+
+function CoreGuard:Monitor(ScreenGui)
+    if self.MonitorConnection then
+        self.MonitorConnection:Disconnect()
+        self.MonitorConnection = nil
+    end
+
+    self.MonitorConnection = ScreenGui.AncestryChanged:Connect(function()
+        if self.Recovering then
+            return
+        end
+
+        task.defer(function()
+            if not self:IsMounted(ScreenGui) then
+                self:Log("GUI mount changed unexpectedly.")
+                self:Recover(ScreenGui)
+            end
+        end)
+    end)
+end
+
+function CoreGuard:GetContainer()
+    return self.Container
+end
+
+function CoreGuard:IsUsingCoreGui()
+    return self.UsingCoreGui
+end
+
+function CoreGuard:GetStatus()
+    if not self.Container then
+        return "Uninitialized"
+    end
+
+    if self.UsingCoreGui then
+        return "CoreGui"
+    end
+
+    return "PlayerGui"
+end
+
+function CoreGuard:Shutdown()
+    if self.MonitorConnection then
+        self.MonitorConnection:Disconnect()
+        self.MonitorConnection = nil
+    end
+
+    self.Container = nil
+    self.UsingCoreGui = false
+    self.Initialized = false
+    self.Recovering = false
+end
+
+CoreGuard:Mount(ScreenGui)
+CoreGuard:Monitor(ScreenGui)
 
 local function GetWindowSize()
     if not Camera then
@@ -172,6 +453,7 @@ local FullWindowSize = InitialSize
 local CurrentTitleHeight = 50
 local Collapsed = false
 local CurrentPage = "Execution"
+local PageSwitching = false
 
 local Window = Create("Frame", {
     Name = "Window",
@@ -425,12 +707,53 @@ local MainArea = Create("Frame", {
     Parent = Content
 })
 
-local ExecutionPage = Create("Frame", {
+local ExecutionPage = Create("CanvasGroup", {
     Name = "ExecutionPage",
     Size = UDim2.fromScale(1, 1),
     Position = UDim2.fromScale(0, 0),
     BackgroundTransparency = 1,
+    GroupTransparency = 0,
+    ClipsDescendants = true,
     Parent = MainArea
+})
+
+local ExecutionScroll = Create("ScrollingFrame", {
+    Name = "ExecutionScroll",
+    Size = UDim2.fromScale(1, 1),
+    Position = UDim2.fromScale(0, 0),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    CanvasSize = UDim2.fromOffset(0, 0),
+    ScrollingDirection = Enum.ScrollingDirection.Y,
+    ScrollBarThickness = 4,
+    ScrollBarImageColor3 = Config.Colors.Border,
+    ScrollBarImageTransparency = 0.15,
+    ScrollingEnabled = true,
+    ClipsDescendants = true,
+    AutomaticCanvasSize = Enum.AutomaticSize.None,
+    Parent = ExecutionPage
+})
+
+local ExecutionContent = Create("Frame", {
+    Name = "ExecutionContent",
+    Size = UDim2.new(1, -8, 0, 0),
+    AutomaticSize = Enum.AutomaticSize.Y,
+    BackgroundTransparency = 1,
+    Parent = ExecutionScroll
+})
+
+local ExecutionLayout = Create("UIListLayout", {
+    Padding = UDim.new(0, 0),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Parent = ExecutionContent
+})
+
+Create("UIPadding", {
+    PaddingLeft = UDim.new(0, 14),
+    PaddingRight = UDim.new(0, 8),
+    PaddingTop = UDim.new(0, 11),
+    PaddingBottom = UDim.new(0, 12),
+    Parent = ExecutionContent
 })
 
 local ExecutionScale = Create("UIScale", {
@@ -447,7 +770,7 @@ local PageTitle = Create("TextLabel", {
     TextSize = 20,
     Font = Enum.Font.GothamBold,
     TextXAlignment = Enum.TextXAlignment.Left,
-    Parent = ExecutionPage
+    Parent = ExecutionContent
 })
 
 local PageDescription = Create("TextLabel", {
@@ -459,13 +782,13 @@ local PageDescription = Create("TextLabel", {
     TextSize = 11,
     Font = Enum.Font.Gotham,
     TextXAlignment = Enum.TextXAlignment.Left,
-    Parent = ExecutionPage
+    Parent = ExecutionContent
 })
 
 local Editor = Create("TextBox", {
     Name = "Editor",
-    Size = UDim2.new(1, -32, 1, -116),
-    Position = UDim2.fromOffset(16, 68),
+    Size = UDim2.new(1, -22, 0, 230),
+    LayoutOrder = 3,
     BackgroundColor3 = Color3.fromRGB(10, 12, 15),
     BorderSizePixel = 0,
     ClearTextOnFocus = false,
@@ -479,7 +802,7 @@ local Editor = Create("TextBox", {
     TextXAlignment = Enum.TextXAlignment.Left,
     TextYAlignment = Enum.TextYAlignment.Top,
     TextWrapped = false,
-    Parent = ExecutionPage
+    Parent = ExecutionContent
 })
 
 AddCorner(Editor, 10)
@@ -496,7 +819,7 @@ Create("UIPadding", {
 local ExecuteButton = Create("TextButton", {
     Name = "Execute",
     Size = UDim2.fromOffset(105, 36),
-    Position = UDim2.new(1, -121, 1, -48),
+    LayoutOrder = 4,
     BackgroundColor3 = Config.Colors.Accent,
     BorderSizePixel = 0,
     AutoButtonColor = false,
@@ -504,17 +827,19 @@ local ExecuteButton = Create("TextButton", {
     TextColor3 = Color3.fromRGB(255, 255, 255),
     TextSize = 12,
     Font = Enum.Font.GothamBold,
-    Parent = ExecutionPage
+    Parent = ExecutionContent
 })
 
 AddCorner(ExecuteButton, 9)
 
-local SettingsPage = Create("Frame", {
+local SettingsPage = Create("CanvasGroup", {
     Name = "SettingsPage",
     Size = UDim2.fromScale(1, 1),
     Position = UDim2.fromScale(1, 0),
     BackgroundTransparency = 1,
+    GroupTransparency = 1,
     Visible = false,
+    ClipsDescendants = true,
     Parent = MainArea
 })
 
@@ -547,13 +872,50 @@ local SettingsDescription = Create("TextLabel", {
     Parent = SettingsPage
 })
 
+local SettingsScroll = Create("ScrollingFrame", {
+    Name = "SettingsScroll",
+    Size = UDim2.new(1, -28, 1, -58),
+    Position = UDim2.fromOffset(14, 58),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    CanvasSize = UDim2.fromOffset(0, 0),
+    ScrollingDirection = Enum.ScrollingDirection.Y,
+    ScrollBarThickness = 4,
+    ScrollBarImageColor3 = Config.Colors.Border,
+    ScrollBarImageTransparency = 0.15,
+    ScrollingEnabled = true,
+    ClipsDescendants = true,
+    AutomaticCanvasSize = Enum.AutomaticSize.None,
+    Parent = SettingsPage
+})
+
+local SettingsContent = Create("Frame", {
+    Name = "SettingsContent",
+    Size = UDim2.new(1, -8, 0, 0),
+    AutomaticSize = Enum.AutomaticSize.Y,
+    BackgroundTransparency = 1,
+    Parent = SettingsScroll
+})
+
+local SettingsLayout = Create("UIListLayout", {
+    Padding = UDim.new(0, 10),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Parent = SettingsContent
+})
+
+Create("UIPadding", {
+    PaddingRight = UDim.new(0, 8),
+    PaddingBottom = UDim.new(0, 12),
+    Parent = SettingsContent
+})
+
 local AboutCard = Create("Frame", {
     Name = "AboutCard",
-    Size = UDim2.new(1, -32, 0, 110),
-    Position = UDim2.fromOffset(16, 70),
+    Size = UDim2.new(1, 0, 0, 110),
+    LayoutOrder = 1,
     BackgroundColor3 = Config.Colors.Surface,
     BorderSizePixel = 0,
-    Parent = SettingsPage
+    Parent = SettingsContent
 })
 
 AddCorner(AboutCard, 10)
@@ -594,6 +956,169 @@ local AboutCreator = Create("TextLabel", {
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = AboutCard
 })
+
+local CoreGuardCard = Create("Frame", {
+    Name = "CoreGuardCard",
+    Size = UDim2.new(1, 0, 0, 172),
+    LayoutOrder = 2,
+    BackgroundColor3 = Config.Colors.Surface,
+    BorderSizePixel = 0,
+    Parent = SettingsContent
+})
+
+AddCorner(CoreGuardCard, 10)
+AddStroke(CoreGuardCard, Config.Colors.Border, 1, 0.35)
+
+local CoreGuardTitle = Create("TextLabel", {
+    Size = UDim2.new(1, -24, 0, 22),
+    Position = UDim2.fromOffset(12, 11),
+    BackgroundTransparency = 1,
+    Text = "CoreGuard",
+    TextColor3 = Config.Colors.Text,
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = CoreGuardCard
+})
+
+local CoreGuardStatus = Create("TextLabel", {
+    Size = UDim2.new(1, -24, 0, 18),
+    Position = UDim2.fromOffset(12, 36),
+    BackgroundTransparency = 1,
+    Text = "Status: Checking...",
+    TextColor3 = Config.Colors.SecondaryText,
+    TextSize = 10,
+    Font = Enum.Font.Code,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = CoreGuardCard
+})
+
+local CoreGuardContainer = Create("TextLabel", {
+    Size = UDim2.new(1, -24, 0, 18),
+    Position = UDim2.fromOffset(12, 57),
+    BackgroundTransparency = 1,
+    Text = "Container: Checking...",
+    TextColor3 = Config.Colors.SecondaryText,
+    TextSize = 10,
+    Font = Enum.Font.Code,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = CoreGuardCard
+})
+
+local CoreGuardMonitor = Create("TextLabel", {
+    Size = UDim2.new(1, -24, 0, 18),
+    Position = UDim2.fromOffset(12, 78),
+    BackgroundTransparency = 1,
+    Text = "Monitor: Checking...",
+    TextColor3 = Config.Colors.SecondaryText,
+    TextSize = 10,
+    Font = Enum.Font.Code,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = CoreGuardCard
+})
+
+local CoreGuardFallback = Create("TextLabel", {
+    Size = UDim2.new(1, -24, 0, 18),
+    Position = UDim2.fromOffset(12, 99),
+    BackgroundTransparency = 1,
+    Text = "Fallback: Ready",
+    TextColor3 = Config.Colors.SecondaryText,
+    TextSize = 10,
+    Font = Enum.Font.Code,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = CoreGuardCard
+})
+
+local CoreGuardRecover = Create("TextButton", {
+    Name = "Recover",
+    Size = UDim2.fromOffset(92, 30),
+    Position = UDim2.new(1, -104, 1, -41),
+    BackgroundColor3 = Config.Colors.SurfaceLight,
+    BackgroundTransparency = 0,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Text = "Recover",
+    TextColor3 = Config.Colors.Text,
+    TextSize = 10,
+    Font = Enum.Font.GothamBold,
+    Parent = CoreGuardCard
+})
+
+AddCorner(CoreGuardRecover, 8)
+AddStroke(CoreGuardRecover, Config.Colors.Border, 1, 0.2)
+
+local function UpdateCoreGuardStatus()
+    local Status = CoreGuard:GetStatus()
+    local UsingCoreGui = CoreGuard:IsUsingCoreGui()
+    local MonitorActive = CoreGuard.MonitorConnection ~= nil
+
+    CoreGuardStatus.Text = "Status: " .. Status
+    CoreGuardContainer.Text = "Container: " .. (UsingCoreGui and "CoreGui" or "PlayerGui")
+    CoreGuardMonitor.Text = "Monitor: " .. (MonitorActive and "Active" or "Inactive")
+
+    if Status == "CoreGui" then
+        CoreGuardStatus.TextColor3 = Config.Colors.Accent
+        CoreGuardContainer.TextColor3 = Config.Colors.Accent
+    elseif Status == "PlayerGui" then
+        CoreGuardStatus.TextColor3 = Config.Colors.SecondaryText
+        CoreGuardContainer.TextColor3 = Config.Colors.SecondaryText
+    else
+        CoreGuardStatus.TextColor3 = Config.Colors.MutedText
+        CoreGuardContainer.TextColor3 = Config.Colors.MutedText
+    end
+
+    CoreGuardMonitor.TextColor3 = MonitorActive
+        and Config.Colors.Text
+        or Config.Colors.MutedText
+end
+
+CoreGuardRecover.MouseEnter:Connect(function()
+    Tween(CoreGuardRecover, 0.15, {
+        BackgroundColor3 = Config.Colors.Border
+    })
+end)
+
+CoreGuardRecover.MouseLeave:Connect(function()
+    Tween(CoreGuardRecover, 0.15, {
+        BackgroundColor3 = Config.Colors.SurfaceLight
+    })
+end)
+
+CoreGuardRecover.MouseButton1Click:Connect(function()
+    CoreGuardRecover.Active = false
+    CoreGuardRecover.Text = "Recovering..."
+
+    local Success = CoreGuard:Recover(ScreenGui)
+
+    if Success then
+        CoreGuardRecover.Text = "Recovered"
+    else
+        CoreGuardRecover.Text = "Failed"
+    end
+
+    UpdateCoreGuardStatus()
+
+    task.delay(1.2, function()
+        if CoreGuardRecover.Parent then
+            CoreGuardRecover.Text = "Recover"
+            CoreGuardRecover.Active = true
+        end
+    end)
+end)
+
+UpdateCoreGuardStatus()
+
+local UpdateExecutionScroll = BindAutoScroll(
+    ExecutionScroll,
+    ExecutionContent,
+    ExecutionLayout
+)
+
+local UpdateSettingsScroll = BindAutoScroll(
+    SettingsScroll,
+    SettingsContent,
+    SettingsLayout
+)
 
 local MiniButton = Create("TextButton", {
     Name = "ReopenButton",
@@ -759,29 +1284,38 @@ local function UpdateLayout()
     Creator.Position = UDim2.new(0, 6, 1, -40)
     Creator.TextSize = Compact and 7 or 9
 
-    PageTitle.Position = UDim2.fromOffset(14, 11)
-    PageTitle.TextSize = Compact and 16 or 20
+PageTitle.TextSize = Compact and 16 or 20
+PageDescription.TextSize = Compact and 9 or 11
 
-    PageDescription.Position = UDim2.fromOffset(14, 34)
-    PageDescription.TextSize = Compact and 9 or 11
+local EditorHeight = math.max(
+    150,
+    ExecutionScroll.AbsoluteSize.Y - (Compact and 112 or 125)
+)
 
-    Editor.Position = UDim2.fromOffset(14, 58)
-    Editor.Size = UDim2.new(1, -28, 1, -101)
-    Editor.TextSize = Compact and 10 or 13
+Editor.Size = UDim2.new(
+    1,
+    -22,
+    0,
+    EditorHeight
+)
 
-    ExecuteButton.Size = UDim2.fromOffset(
-        Compact and 82 or 105,
-        Compact and 31 or 36
-    )
+Editor.TextSize = Compact and 10 or 13
 
-    ExecuteButton.Position = UDim2.new(
-        1,
-        -(Compact and 96 or 121),
-        1,
-        -(Compact and 40 or 48)
-    )
+ExecuteButton.Size = UDim2.fromOffset(
+    Compact and 82 or 105,
+    Compact and 31 or 36
+)
 
-    ExecuteButton.TextSize = Compact and 10 or 12
+ExecuteButton.TextSize = Compact and 10 or 12
+
+ExecuteButton.Position = UDim2.new(
+    1,
+    -(Compact and 96 or 121),
+    1,
+    -(Compact and 40 or 48)
+)
+
+ExecuteButton.TextSize = Compact and 10 or 12
 
     SettingsTitle.Position = UDim2.fromOffset(14, 11)
     SettingsTitle.TextSize = Compact and 16 or 20
@@ -789,8 +1323,19 @@ local function UpdateLayout()
     SettingsDescription.Position = UDim2.fromOffset(14, 34)
     SettingsDescription.TextSize = Compact and 9 or 11
 
-    AboutCard.Position = UDim2.fromOffset(14, 58)
-    AboutCard.Size = UDim2.new(1, -28, 0, Compact and 95 or 110)
+    AboutCard.Size = UDim2.new(
+    1,
+    0,
+    0,
+    Compact and 95 or 110
+)
+
+    CoreGuardCard.Size = UDim2.new(
+    1,
+    0,
+    0,
+    Compact and 168 or 172
+)
 
     AboutTitle.Position = UDim2.fromOffset(11, 10)
     AboutTitle.TextSize = Compact and 12 or 14
@@ -800,6 +1345,11 @@ local function UpdateLayout()
 
     AboutCreator.Position = UDim2.fromOffset(11, 56)
     AboutCreator.TextSize = Compact and 9 or 11
+
+task.defer(function()
+    UpdateExecutionScroll()
+    UpdateSettingsScroll()
+end)
 end
 
 local function CollapseWindow()
@@ -963,71 +1513,125 @@ local function CloseWindow()
 end
 
 local function SwitchPage(Target)
-    if Target == CurrentPage then
+    if Target == CurrentPage or PageSwitching then
         return
     end
 
+    PageSwitching = true
+
     local GoingToSettings = Target == "Settings"
+
     local OutgoingPage = GoingToSettings and ExecutionPage or SettingsPage
     local IncomingPage = GoingToSettings and SettingsPage or ExecutionPage
+
     local OutgoingScale = GoingToSettings and ExecutionScale or SettingsScale
     local IncomingScale = GoingToSettings and SettingsScale or ExecutionScale
 
-    CurrentPage = Target
-
     local Direction = GoingToSettings and 1 or -1
 
+    CurrentPage = Target
+
     IncomingPage.Visible = true
-    IncomingPage.Position = UDim2.new(0, Direction * 24, 0, 0)
+    IncomingPage.GroupTransparency = 1
+    IncomingPage.Position = UDim2.new(0, Direction * 10, 0, 0)
     IncomingScale.Scale = 0.985
 
-    Tween(OutgoingPage, 0.22, {
-        Position = UDim2.new(0, -Direction * 24, 0, 0)
-    })
+    Tween(
+        OutgoingPage,
+        0.16,
+        {
+            GroupTransparency = 1,
+            Position = UDim2.new(0, -Direction * 10, 0, 0)
+        },
+        Enum.EasingStyle.Quint,
+        Enum.EasingDirection.In
+    )
 
-    Tween(OutgoingScale, 0.22, {
-        Scale = 0.985
-    })
+    Tween(
+        OutgoingScale,
+        0.16,
+        {
+            Scale = 0.985
+        },
+        Enum.EasingStyle.Quint,
+        Enum.EasingDirection.In
+    )
 
-    Tween(IncomingPage, 0.28, {
-        Position = UDim2.fromScale(0, 0)
-    })
+    task.delay(0.035, function()
+        Tween(
+            IncomingPage,
+            0.25,
+            {
+                GroupTransparency = 0,
+                Position = UDim2.fromScale(0, 0)
+            },
+            Enum.EasingStyle.Quint,
+            Enum.EasingDirection.Out
+        )
 
-    Tween(IncomingScale, 0.28, {
-        Scale = 1
-    })
+        Tween(
+            IncomingScale,
+            0.25,
+            {
+                Scale = 1
+            },
+            Enum.EasingStyle.Quint,
+            Enum.EasingDirection.Out
+        )
+    end)
 
-    task.delay(0.23, function()
+    task.delay(0.18, function()
         OutgoingPage.Visible = false
         OutgoingPage.Position = UDim2.fromScale(0, 0)
+        OutgoingPage.GroupTransparency = 0
         OutgoingScale.Scale = 1
     end)
 
     if GoingToSettings then
-        Tween(SettingsButton, 0.2, {
-            BackgroundTransparency = 0.82,
-            BackgroundColor3 = Config.Colors.SurfaceLight,
-            TextColor3 = Config.Colors.Text
-        })
+        Tween(
+            SettingsButton,
+            0.2,
+            {
+                BackgroundTransparency = 0.82,
+                BackgroundColor3 = Config.Colors.SurfaceLight,
+                TextColor3 = Config.Colors.Text
+            }
+        )
 
-        Tween(ExecutionButton, 0.2, {
-            BackgroundTransparency = 1,
-            BackgroundColor3 = Config.Colors.Surface,
-            TextColor3 = Config.Colors.SecondaryText
-        })
+        Tween(
+            ExecutionButton,
+            0.2,
+            {
+                BackgroundTransparency = 1,
+                BackgroundColor3 = Config.Colors.Surface,
+                TextColor3 = Config.Colors.SecondaryText
+            }
+        )
     else
-        Tween(ExecutionButton, 0.2, {
-            BackgroundTransparency = 0,
-            BackgroundColor3 = Config.Colors.Accent,
-            TextColor3 = Color3.fromRGB(255, 255, 255)
-        })
+        Tween(
+            ExecutionButton,
+            0.2,
+            {
+                BackgroundTransparency = 0,
+                BackgroundColor3 = Config.Colors.Accent,
+                TextColor3 = Color3.fromRGB(255, 255, 255)
+            }
+        )
 
-        Tween(SettingsButton, 0.2, {
-            BackgroundTransparency = 1,
-            BackgroundColor3 = Config.Colors.Surface,
-            TextColor3 = Config.Colors.SecondaryText
-        })
+        Tween(
+            SettingsButton,
+            0.2,
+            {
+                BackgroundTransparency = 1,
+                BackgroundColor3 = Config.Colors.Surface,
+                TextColor3 = Config.Colors.SecondaryText
+            }
+        )
     end
+
+    task.delay(0.29, function()
+        PageSwitching = false
+    end)
 end
 
 CloseButton.MouseEnter:Connect(function()
