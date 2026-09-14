@@ -1002,11 +1002,6 @@ UserInputService.InputBegan:Connect(function(Input, Processed)
         ExecuteScript()
         return
     end
-
-    if Input.KeyCode == Enum.KeyCode.L
-        and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-        ClearExecution()
-    end
 end)
 
 local SettingsPage = Create("CanvasGroup", {
