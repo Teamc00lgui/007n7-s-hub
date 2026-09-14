@@ -51,4 +51,4 @@ _Please give credit if you repost or modify the project._
 
 Started: September 14, 2026
 
-c00lgui Reborn is actively developed and new features may be added over time.
+007n7's hub is actively developed and new features may be added over time.
