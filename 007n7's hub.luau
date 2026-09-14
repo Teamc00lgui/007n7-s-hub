@@ -248,6 +248,8 @@ local Collapsed = false
 local CurrentPage = "Execution"
 local PageSwitching = false
 
+local SwitchPage
+
 local Window = Create("Frame", {
     Name = "Window",
     Size = UDim2.fromOffset(InitialSize.X, InitialSize.Y),
@@ -422,7 +424,7 @@ local SidebarPadding = Create("UIPadding", {
 
 local Navigation = Create("Frame", {
     Name = "Navigation",
-    Size = UDim2.new(1, 0, 0, 82),
+    Size = UDim2.new(1, 0, 0, 121),
     BackgroundTransparency = 1,
     Parent = Sidebar
 })
@@ -436,6 +438,7 @@ local NavigationLayout = Create("UIListLayout", {
 local ExecutionButton = Create("TextButton", {
     Name = "Execution",
     Size = UDim2.new(1, 0, 0, 38),
+    LayoutOrder = 1,
     BackgroundColor3 = Config.Colors.Accent,
     BackgroundTransparency = 0,
     BorderSizePixel = 0,
@@ -455,9 +458,33 @@ Create("UIPadding", {
     Parent = ExecutionButton
 })
 
+local ScriptBloxButton = Create("TextButton", {
+    Name = "ScriptBlox",
+    Size = UDim2.new(1, 0, 0, 38),
+    LayoutOrder = 2,
+    BackgroundColor3 = Config.Colors.Surface,
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Text = "ScriptBlox",
+    TextColor3 = Config.Colors.SecondaryText,
+    TextSize = 13,
+    Font = Enum.Font.GothamMedium,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = Navigation
+})
+
+AddCorner(ScriptBloxButton, 9)
+
+Create("UIPadding", {
+    PaddingLeft = UDim.new(0, 11),
+    Parent = ScriptBloxButton
+})
+
 local SettingsButton = Create("TextButton", {
     Name = "Settings",
     Size = UDim2.new(1, 0, 0, 38),
+    LayoutOrder = 3,
     BackgroundColor3 = Config.Colors.Surface,
     BackgroundTransparency = 1,
     BorderSizePixel = 0,
@@ -671,7 +698,7 @@ local Editor = Create("TextBox", {
     Parent = EditorScroll
 })
 
-local EditorPadding = Create("UIPadding", {
+Create("UIPadding", {
     PaddingTop = UDim.new(0, 1),
     PaddingBottom = UDim.new(0, 12),
     PaddingLeft = UDim.new(0, 1),
@@ -954,7 +981,10 @@ local function ExecuteScript()
         local Message = tostring(Result)
 
         SetOutput(
-            "[ EXECUTION ERROR ]\n\n" .. Message .. "\n\nDuration: " .. string.format("%.3fs", Duration),
+            "[ EXECUTION ERROR ]\n\n"
+                .. Message
+                .. "\n\nDuration: "
+                .. string.format("%.3fs", Duration),
             Config.Colors.Error,
             "Execution error"
         )
@@ -1022,6 +1052,624 @@ UserInputService.InputBegan:Connect(function(Input, Processed)
         ExecuteScript()
         return
     end
+end)
+
+local ScriptBloxPage = Create("CanvasGroup", {
+    Name = "ScriptBloxPage",
+    Size = UDim2.fromScale(1, 1),
+    Position = UDim2.fromScale(1, 0),
+    BackgroundTransparency = 1,
+    GroupTransparency = 1,
+    Visible = false,
+    ClipsDescendants = true,
+    Parent = MainArea
+})
+
+local ScriptBloxScale = Create("UIScale", {
+    Scale = 1,
+    Parent = ScriptBloxPage
+})
+
+local ScriptBloxTitle = Create("TextLabel", {
+    Size = UDim2.new(1, -32, 0, 26),
+    Position = UDim2.fromOffset(16, 14),
+    BackgroundTransparency = 1,
+    Text = "ScriptBlox",
+    TextColor3 = Config.Colors.Text,
+    TextSize = 20,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = ScriptBloxPage
+})
+
+local ScriptBloxDescription = Create("TextLabel", {
+    Size = UDim2.new(1, -32, 0, 18),
+    Position = UDim2.fromOffset(16, 39),
+    BackgroundTransparency = 1,
+    Text = "Search and load scripts from ScriptBlox.",
+    TextColor3 = Config.Colors.SecondaryText,
+    TextSize = 11,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = ScriptBloxPage
+})
+
+local ScriptBloxSearchBar = Create("Frame", {
+    Name = "SearchBar",
+    Size = UDim2.new(1, -32, 0, 42),
+    Position = UDim2.fromOffset(16, 68),
+    BackgroundColor3 = Config.Colors.Surface,
+    BorderSizePixel = 0,
+    Parent = ScriptBloxPage
+})
+
+AddCorner(ScriptBloxSearchBar, 10)
+AddStroke(ScriptBloxSearchBar, Config.Colors.Border, 1, 0.3)
+
+local ScriptBloxSearchBox = Create("TextBox", {
+    Name = "SearchBox",
+    Size = UDim2.new(1, -105, 1, 0),
+    Position = UDim2.fromOffset(12, 0),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ClearTextOnFocus = false,
+    Text = "",
+    PlaceholderText = "Search ScriptBlox...",
+    PlaceholderColor3 = Config.Colors.MutedText,
+    TextColor3 = Config.Colors.Text,
+    TextSize = 11,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = ScriptBloxSearchBar
+})
+
+local ScriptBloxSearchButton = Create("TextButton", {
+    Name = "Search",
+    Size = UDim2.fromOffset(82, 32),
+    Position = UDim2.new(1, -88, 0.5, -16),
+    BackgroundColor3 = Config.Colors.Accent,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Text = "Search",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 10,
+    Font = Enum.Font.GothamBold,
+    Parent = ScriptBloxSearchBar
+})
+
+AddCorner(ScriptBloxSearchButton, 8)
+
+local ScriptBloxStatus = Create("TextLabel", {
+    Size = UDim2.new(1, -32, 0, 18),
+    Position = UDim2.fromOffset(16, 116),
+    BackgroundTransparency = 1,
+    Text = "Enter a search query.",
+    TextColor3 = Config.Colors.MutedText,
+    TextSize = 9,
+    Font = Enum.Font.Code,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = ScriptBloxPage
+})
+
+local ScriptBloxResultsScroll = Create("ScrollingFrame", {
+    Name = "ResultsScroll",
+    Size = UDim2.new(1, -32, 1, -180),
+    Position = UDim2.fromOffset(16, 140),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    CanvasSize = UDim2.fromOffset(0, 0),
+    ScrollingDirection = Enum.ScrollingDirection.Y,
+    ScrollBarThickness = 4,
+    ScrollBarImageColor3 = Config.Colors.Border,
+    ScrollBarImageTransparency = 0.15,
+    ScrollingEnabled = true,
+    AutomaticCanvasSize = Enum.AutomaticSize.None,
+    ClipsDescendants = true,
+    Parent = ScriptBloxPage
+})
+
+local ScriptBloxResults = Create("Frame", {
+    Name = "Results",
+    Size = UDim2.new(1, -8, 0, 0),
+    AutomaticSize = Enum.AutomaticSize.Y,
+    BackgroundTransparency = 1,
+    Parent = ScriptBloxResultsScroll
+})
+
+local ScriptBloxResultsLayout = Create("UIListLayout", {
+    Padding = UDim.new(0, 8),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Parent = ScriptBloxResults
+})
+
+Create("UIPadding", {
+    PaddingBottom = UDim.new(0, 12),
+    Parent = ScriptBloxResults
+})
+
+local ScriptBloxPowered = Create("TextLabel", {
+    Size = UDim2.new(1, -32, 0, 16),
+    Position = UDim2.new(0, 16, 1, -20),
+    BackgroundTransparency = 1,
+    Text = "Powered by ScriptBlox.com",
+    TextColor3 = Config.Colors.MutedText,
+    TextSize = 8,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Right,
+    Parent = ScriptBloxPage
+})
+
+local ScriptBloxPageLabel = Create("TextLabel", {
+    Size = UDim2.fromOffset(90, 28),
+    Position = UDim2.new(0, 16, 1, -40),
+    BackgroundTransparency = 1,
+    Text = "Page 1",
+    TextColor3 = Config.Colors.MutedText,
+    TextSize = 9,
+    Font = Enum.Font.Code,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = ScriptBloxPage
+})
+
+local ScriptBloxPrevious = Create("TextButton", {
+    Name = "Previous",
+    Size = UDim2.fromOffset(82, 28),
+    Position = UDim2.new(1, -190, 1, -40),
+    BackgroundColor3 = Config.Colors.SurfaceLight,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Text = "Previous",
+    TextColor3 = Config.Colors.Text,
+    TextSize = 9,
+    Font = Enum.Font.GothamBold,
+    Parent = ScriptBloxPage
+})
+
+AddCorner(ScriptBloxPrevious, 8)
+AddStroke(ScriptBloxPrevious, Config.Colors.Border, 1, 0.2)
+
+local ScriptBloxNext = Create("TextButton", {
+    Name = "Next",
+    Size = UDim2.fromOffset(82, 28),
+    Position = UDim2.new(1, -100, 1, -40),
+    BackgroundColor3 = Config.Colors.SurfaceLight,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Text = "Next",
+    TextColor3 = Config.Colors.Text,
+    TextSize = 9,
+    Font = Enum.Font.GothamBold,
+    Parent = ScriptBloxPage
+})
+
+AddCorner(ScriptBloxNext, 8)
+AddStroke(ScriptBloxNext, Config.Colors.Border, 1, 0.2)
+
+local ScriptBloxCurrentPage = 1
+local ScriptBloxTotalPages = 1
+local ScriptBloxSearching = false
+
+local function UpdateScriptBloxScroll()
+    local Height = ScriptBloxResultsLayout.AbsoluteContentSize.Y + 16
+    local Viewport = ScriptBloxResultsScroll.AbsoluteSize.Y
+
+    ScriptBloxResultsScroll.CanvasSize = UDim2.fromOffset(
+        0,
+        math.max(Height, Viewport)
+    )
+end
+
+ScriptBloxResultsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(
+    UpdateScriptBloxScroll
+)
+
+ScriptBloxResultsScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(
+    UpdateScriptBloxScroll
+)
+
+local function ClearScriptBloxResults()
+    for _, Child in ipairs(ScriptBloxResults:GetChildren()) do
+        if Child:IsA("GuiObject") and Child ~= ScriptBloxResultsLayout then
+            Child:Destroy()
+        end
+    end
+end
+
+local function FormatViews(Views)
+    Views = tonumber(Views) or 0
+
+    if Views >= 1000000 then
+        return string.format("%.1fM", Views / 1000000)
+    end
+
+    if Views >= 1000 then
+        return string.format("%.1fK", Views / 1000)
+    end
+
+    return tostring(Views)
+end
+
+local function SetEditorSource(Source)
+    Editor.Text = Source or ""
+    UpdateLineCount()
+    EditorScroll.CanvasPosition = Vector2.zero
+end
+
+local function CopyToClipboard(Source)
+    if type(setclipboard) ~= "function" then
+        return false
+    end
+
+    local Success = pcall(function()
+        setclipboard(Source)
+    end)
+
+    return Success
+end
+
+local function CreateScriptBloxCard(ScriptData, Index)
+    local Card = Create("Frame", {
+        Name = "Script_" .. tostring(Index),
+        Size = UDim2.new(1, 0, 0, 112),
+        BackgroundColor3 = Config.Colors.Surface,
+        BorderSizePixel = 0,
+        LayoutOrder = Index,
+        Parent = ScriptBloxResults
+    })
+
+    AddCorner(Card, 10)
+    AddStroke(Card, Config.Colors.Border, 1, 0.3)
+
+    local Title = Create("TextLabel", {
+        Size = UDim2.new(1, -24, 0, 21),
+        Position = UDim2.fromOffset(12, 10),
+        BackgroundTransparency = 1,
+        Text = tostring(ScriptData.title or "Untitled"),
+        TextColor3 = Config.Colors.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Card
+    })
+
+    local GameName = "Universal"
+
+    if ScriptData.game and ScriptData.game.name then
+        GameName = tostring(ScriptData.game.name)
+    end
+
+    local Info = Create("TextLabel", {
+        Size = UDim2.new(1, -24, 0, 18),
+        Position = UDim2.fromOffset(12, 32),
+        BackgroundTransparency = 1,
+        Text = GameName
+            .. "  •  "
+            .. FormatViews(ScriptData.views)
+            .. " views",
+        TextColor3 = Config.Colors.SecondaryText,
+        TextSize = 9,
+        Font = Enum.Font.Code,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Card
+    })
+
+    local Tags = {}
+
+    if ScriptData.verified then
+        table.insert(Tags, "Verified")
+    end
+
+    if ScriptData.isUniversal then
+        table.insert(Tags, "Universal")
+    end
+
+    if ScriptData.key then
+        table.insert(Tags, "Key")
+    else
+        table.insert(Tags, "No Key")
+    end
+
+    if ScriptData.isPatched then
+        table.insert(Tags, "Patched")
+    else
+        table.insert(Tags, "Working")
+    end
+
+    local TagText = table.concat(Tags, "  •  ")
+
+    local Metadata = Create("TextLabel", {
+        Size = UDim2.new(1, -24, 0, 17),
+        Position = UDim2.fromOffset(12, 51),
+        BackgroundTransparency = 1,
+        Text = TagText,
+        TextColor3 = Config.Colors.MutedText,
+        TextSize = 8,
+        Font = Enum.Font.Code,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Card
+    })
+
+    local LoadButton = Create("TextButton", {
+        Name = "Load",
+        Size = UDim2.fromOffset(74, 27),
+        Position = UDim2.new(1, -164, 1, -38),
+        BackgroundColor3 = Config.Colors.Accent,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Text = "Load",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 9,
+        Font = Enum.Font.GothamBold,
+        Parent = Card
+    })
+
+    AddCorner(LoadButton, 7)
+
+    local CopyButton = Create("TextButton", {
+        Name = "Copy",
+        Size = UDim2.fromOffset(74, 27),
+        Position = UDim2.new(1, -82, 1, -38),
+        BackgroundColor3 = Config.Colors.SurfaceLight,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Text = "Copy",
+        TextColor3 = Config.Colors.Text,
+        TextSize = 9,
+        Font = Enum.Font.GothamBold,
+        Parent = Card
+    })
+
+    AddCorner(CopyButton, 7)
+    AddStroke(CopyButton, Config.Colors.Border, 1, 0.2)
+
+    LoadButton.MouseEnter:Connect(function()
+        Tween(LoadButton, 0.15, {
+            BackgroundColor3 = Config.Colors.AccentHover
+        })
+    end)
+
+    LoadButton.MouseLeave:Connect(function()
+        Tween(LoadButton, 0.15, {
+            BackgroundColor3 = Config.Colors.Accent
+        })
+    end)
+
+    CopyButton.MouseEnter:Connect(function()
+        Tween(CopyButton, 0.15, {
+            BackgroundColor3 = Config.Colors.Border
+        })
+    end)
+
+    CopyButton.MouseLeave:Connect(function()
+        Tween(CopyButton, 0.15, {
+            BackgroundColor3 = Config.Colors.SurfaceLight
+        })
+    end)
+
+    LoadButton.MouseButton1Click:Connect(function()
+        local Source = tostring(ScriptData.script or "")
+
+        if Source == "" then
+            ScriptBloxStatus.Text = "This script has no source code."
+            ScriptBloxStatus.TextColor3 = Config.Colors.Warning
+            return
+        end
+
+        SetEditorSource(Source)
+
+        ScriptBloxStatus.Text =
+            "Loaded: "
+            .. tostring(ScriptData.title or "Untitled")
+
+        ScriptBloxStatus.TextColor3 = Config.Colors.Success
+
+        SwitchPage("Execution")
+    end)
+
+    CopyButton.MouseButton1Click:Connect(function()
+        local Source = tostring(ScriptData.script or "")
+
+        if Source == "" then
+            ScriptBloxStatus.Text = "This script has no source code."
+            ScriptBloxStatus.TextColor3 = Config.Colors.Warning
+            return
+        end
+
+        if CopyToClipboard(Source) then
+            ScriptBloxStatus.Text =
+                "Copied: "
+                .. tostring(ScriptData.title or "Untitled")
+
+            ScriptBloxStatus.TextColor3 = Config.Colors.Success
+        else
+            ScriptBloxStatus.Text = "Clipboard is unavailable."
+            ScriptBloxStatus.TextColor3 = Config.Colors.Warning
+        end
+    end)
+
+    return Card
+end
+
+local function SearchScriptBlox(Page)
+    if ScriptBloxSearching then
+        return
+    end
+
+    local Query = ScriptBloxSearchBox.Text
+
+    if Query:match("^%s*$") then
+        ScriptBloxStatus.Text = "Enter a search query."
+        ScriptBloxStatus.TextColor3 = Config.Colors.Warning
+        return
+    end
+
+    ScriptBloxSearching = true
+
+    ScriptBloxStatus.Text = "Searching ScriptBlox..."
+    ScriptBloxStatus.TextColor3 = Config.Colors.Accent
+
+    ClearScriptBloxResults()
+
+    local EncodedQuery = HttpService:UrlEncode(Query)
+
+    local Url =
+        "https://scriptblox.com/api/script/search?q="
+        .. EncodedQuery
+        .. "&page="
+        .. tostring(Page)
+        .. "&max=20"
+
+    local Success, Response = pcall(function()
+        return game:HttpGet(Url)
+    end)
+
+    if not Success then
+        ScriptBloxSearching = false
+        ScriptBloxStatus.Text =
+            "Request failed: "
+            .. tostring(Response)
+
+        ScriptBloxStatus.TextColor3 = Config.Colors.Error
+
+        return
+    end
+
+    local DecodeSuccess, Data = pcall(function()
+        return HttpService:JSONDecode(Response)
+    end)
+
+    if not DecodeSuccess or type(Data) ~= "table" then
+        ScriptBloxSearching = false
+        ScriptBloxStatus.Text = "Invalid ScriptBlox response."
+        ScriptBloxStatus.TextColor3 = Config.Colors.Error
+
+        return
+    end
+
+    if Data.message then
+        ScriptBloxSearching = false
+        ScriptBloxStatus.Text = tostring(Data.message)
+        ScriptBloxStatus.TextColor3 = Config.Colors.Error
+
+        return
+    end
+
+    local Result = Data.result
+
+    if type(Result) ~= "table" then
+        ScriptBloxSearching = false
+        ScriptBloxStatus.Text = "No results returned."
+        ScriptBloxStatus.TextColor3 = Config.Colors.Warning
+
+        return
+    end
+
+    local Scripts = Result.scripts
+
+    if type(Scripts) ~= "table" or #Scripts == 0 then
+        ScriptBloxSearching = false
+
+        ScriptBloxTotalPages =
+            tonumber(Result.totalPages) or 1
+
+        ScriptBloxCurrentPage = Page
+        ScriptBloxPageLabel.Text =
+            "Page "
+            .. tostring(Page)
+
+        ScriptBloxStatus.Text = "No scripts found."
+        ScriptBloxStatus.TextColor3 = Config.Colors.Warning
+
+        ScriptBloxPrevious.Active = Page > 1
+        ScriptBloxNext.Active = Page < ScriptBloxTotalPages
+
+        UpdateScriptBloxScroll()
+
+        return
+    end
+
+    ScriptBloxCurrentPage = Page
+
+    ScriptBloxTotalPages =
+        tonumber(Result.totalPages) or Page
+
+    for Index, ScriptData in ipairs(Scripts) do
+        CreateScriptBloxCard(ScriptData, Index)
+    end
+
+    ScriptBloxPageLabel.Text =
+        "Page "
+        .. tostring(ScriptBloxCurrentPage)
+        .. " / "
+        .. tostring(ScriptBloxTotalPages)
+
+    ScriptBloxStatus.Text =
+        tostring(#Scripts)
+        .. " scripts found."
+
+    ScriptBloxStatus.TextColor3 =
+        Config.Colors.SecondaryText
+
+    ScriptBloxPrevious.Active =
+        ScriptBloxCurrentPage > 1
+
+    ScriptBloxNext.Active =
+        ScriptBloxCurrentPage < ScriptBloxTotalPages
+
+    UpdateScriptBloxScroll()
+
+    ScriptBloxSearching = false
+end
+
+ScriptBloxSearchButton.MouseEnter:Connect(function()
+    Tween(ScriptBloxSearchButton, 0.15, {
+        BackgroundColor3 = Config.Colors.AccentHover
+    })
+end)
+
+ScriptBloxSearchButton.MouseLeave:Connect(function()
+    Tween(ScriptBloxSearchButton, 0.15, {
+        BackgroundColor3 = Config.Colors.Accent
+    })
+end)
+
+ScriptBloxSearchButton.MouseButton1Click:Connect(function()
+    ScriptBloxCurrentPage = 1
+    SearchScriptBlox(1)
+end)
+
+ScriptBloxSearchBox.FocusLost:Connect(function(EnterPressed)
+    if EnterPressed then
+        ScriptBloxCurrentPage = 1
+        SearchScriptBlox(1)
+    end
+end)
+
+ScriptBloxPrevious.MouseButton1Click:Connect(function()
+    if ScriptBloxSearching then
+        return
+    end
+
+    if ScriptBloxCurrentPage <= 1 then
+        return
+    end
+
+    SearchScriptBlox(ScriptBloxCurrentPage - 1)
+end)
+
+ScriptBloxNext.MouseButton1Click:Connect(function()
+    if ScriptBloxSearching then
+        return
+    end
+
+    if ScriptBloxCurrentPage >= ScriptBloxTotalPages then
+        return
+    end
+
+    SearchScriptBlox(ScriptBloxCurrentPage + 1)
 end)
 
 local SettingsPage = Create("CanvasGroup", {
@@ -1256,10 +1904,21 @@ local function UpdateCoreGuardStatus()
     local MonitorActive = CoreGuard:IsMonitoring()
     local Enabled = CoreGuard:IsEnabled()
 
-    CoreGuardStatus.Text = "Status: " .. (Enabled and "Enabled" or "Disabled")
-    CoreGuardContainer.Text = "Container: " .. (UsingCoreGui and "CoreGui" or "PlayerGui")
-    CoreGuardMonitor.Text = "Monitor: " .. (MonitorActive and "Active" or "Inactive")
-    CoreGuardFallback.Text = "Fallback: " .. (UsingCoreGui and "Ready" or "Active")
+    CoreGuardStatus.Text =
+        "Status: "
+        .. (Enabled and "Enabled" or "Disabled")
+
+    CoreGuardContainer.Text =
+        "Container: "
+        .. (UsingCoreGui and "CoreGui" or "PlayerGui")
+
+    CoreGuardMonitor.Text =
+        "Monitor: "
+        .. (MonitorActive and "Active" or "Inactive")
+
+    CoreGuardFallback.Text =
+        "Fallback: "
+        .. (UsingCoreGui and "Ready" or "Active")
 
     if Enabled then
         CoreGuardStatus.TextColor3 = Config.Colors.Accent
@@ -1273,11 +1932,13 @@ local function UpdateCoreGuardStatus()
         CoreGuardContainer.TextColor3 = Config.Colors.SecondaryText
     end
 
-    CoreGuardMonitor.TextColor3 = MonitorActive
+    CoreGuardMonitor.TextColor3 =
+        MonitorActive
         and Config.Colors.Text
         or Config.Colors.MutedText
 
-    CoreGuardFallback.TextColor3 = UsingCoreGui
+    CoreGuardFallback.TextColor3 =
+        UsingCoreGui
         and Config.Colors.SecondaryText
         or Config.Colors.Accent
 end
@@ -1332,7 +1993,10 @@ local UpdateSettingsScroll = BindAutoScroll(
 
 local MiniButton = Create("TextButton", {
     Name = "ReopenButton",
-    Size = UDim2.fromOffset(Config.MinimizedSize, Config.MinimizedSize),
+    Size = UDim2.fromOffset(
+        Config.MinimizedSize,
+        Config.MinimizedSize
+    ),
     Position = UDim2.fromOffset(12, 12),
     BackgroundColor3 = Config.Colors.Accent,
     BorderSizePixel = 0,
@@ -1479,12 +2143,14 @@ local function UpdateLayout()
     SidebarPadding.PaddingLeft = UDim.new(0, 6)
     SidebarPadding.PaddingRight = UDim.new(0, 6)
 
-    Navigation.Size = UDim2.new(1, 0, 0, 76)
+    Navigation.Size = UDim2.new(1, 0, 0, 121)
 
     ExecutionButton.Size = UDim2.new(1, 0, 0, 35)
+    ScriptBloxButton.Size = UDim2.new(1, 0, 0, 35)
     SettingsButton.Size = UDim2.new(1, 0, 0, 35)
 
     ExecutionButton.TextSize = Compact and 10 or 13
+    ScriptBloxButton.TextSize = Compact and 10 or 13
     SettingsButton.TextSize = Compact and 10 or 13
 
     MainArea.Position = UDim2.fromOffset(SidebarWidth, 0)
@@ -1504,7 +2170,13 @@ local function UpdateLayout()
         Compact and 175 or 205
     )
 
-    EditorHeader.Size = UDim2.new(1, 0, 0, Compact and 28 or 31)
+    EditorHeader.Size = UDim2.new(
+        1,
+        0,
+        0,
+        Compact and 28 or 31
+    )
+
     EditorScroll.Position = UDim2.fromOffset(
         1,
         Compact and 29 or 32
@@ -1572,6 +2244,118 @@ local function UpdateLayout()
     OutputTitle.TextSize = Compact and 8 or 9
     OutputStatus.TextSize = Compact and 8 or 9
 
+    ScriptBloxTitle.Position = UDim2.fromOffset(
+        Compact and 14 or 16,
+        Compact and 11 or 14
+    )
+
+    ScriptBloxTitle.TextSize = Compact and 16 or 20
+
+    ScriptBloxDescription.Position = UDim2.fromOffset(
+        Compact and 14 or 16,
+        Compact and 34 or 39
+    )
+
+    ScriptBloxDescription.TextSize = Compact and 9 or 11
+
+    ScriptBloxSearchBar.Position = UDim2.fromOffset(
+        Compact and 14 or 16,
+        Compact and 60 or 68
+    )
+
+    ScriptBloxSearchBar.Size = UDim2.new(
+        1,
+        Compact and -28 or -32,
+        0,
+        Compact and 38 or 42
+    )
+
+    ScriptBloxSearchButton.Size = UDim2.fromOffset(
+        Compact and 72 or 82,
+        Compact and 29 or 32
+    )
+
+    ScriptBloxSearchButton.Position = UDim2.new(
+        1,
+        Compact and -78 or -88,
+        0.5,
+        Compact and -14.5 or -16
+    )
+
+    ScriptBloxSearchBox.TextSize = Compact and 9 or 11
+
+    ScriptBloxStatus.Position = UDim2.fromOffset(
+        Compact and 14 or 16,
+        Compact and 103 or 116
+    )
+
+    ScriptBloxStatus.TextSize = Compact and 8 or 9
+
+    ScriptBloxResultsScroll.Position = UDim2.fromOffset(
+        Compact and 14 or 16,
+        Compact and 126 or 140
+    )
+
+    ScriptBloxResultsScroll.Size = UDim2.new(
+        1,
+        Compact and -28 or -32,
+        1,
+        Compact and -166 or -180
+    )
+
+    ScriptBloxPowered.Size = UDim2.new(
+        1,
+        Compact and -28 or -32,
+        0,
+        16
+    )
+
+    ScriptBloxPowered.Position = UDim2.new(
+        0,
+        Compact and 14 or 16,
+        1,
+        -20
+    )
+
+    ScriptBloxPowered.TextSize = Compact and 7 or 8
+
+    ScriptBloxPageLabel.Position = UDim2.new(
+        0,
+        Compact and 14 or 16,
+        1,
+        -40
+    )
+
+    ScriptBloxPageLabel.TextSize = Compact and 8 or 9
+
+    ScriptBloxPrevious.Size = UDim2.fromOffset(
+        Compact and 70 or 82,
+        Compact and 27 or 28
+    )
+
+    ScriptBloxPrevious.Position = UDim2.new(
+        1,
+        Compact and -162 or -190,
+        1,
+        -40
+    )
+
+    ScriptBloxPrevious.TextSize = Compact and 8 or 9
+
+    ScriptBloxNext.Size = UDim2.fromOffset(
+        Compact and 70 or 82,
+        Compact and 27 or 28
+    )
+
+    ScriptBloxNext.Position = UDim2.new(
+        1,
+        Compact and -84 or -100,
+        1,
+        -40
+    )
+
+    ScriptBloxNext.TextSize = Compact and 8 or 9
+
     SettingsTitle.Position = UDim2.fromOffset(14, 11)
     SettingsTitle.TextSize = Compact and 16 or 20
 
@@ -1620,6 +2404,7 @@ local function UpdateLayout()
         UpdateSettingsScroll()
         EditorScrollUpdate()
         OutputScrollUpdate()
+        UpdateScriptBloxScroll()
     end)
 end
 
@@ -1783,43 +2568,87 @@ local function CloseWindow()
     end)
 end
 
-local function SwitchPage(Target)
+SwitchPage = function(Target)
     if Target == CurrentPage or PageSwitching then
+        return
+    end
+
+    if Target ~= "Execution"
+        and Target ~= "ScriptBlox"
+        and Target ~= "Settings" then
         return
     end
 
     PageSwitching = true
 
-    local GoingToSettings = Target == "Settings"
+    local Pages = {
+        Execution = {
+            Page = ExecutionPage,
+            Scale = ExecutionScale,
+            Button = ExecutionButton
+        },
 
-    local OutgoingPage = GoingToSettings and ExecutionPage or SettingsPage
-    local IncomingPage = GoingToSettings and SettingsPage or ExecutionPage
+        ScriptBlox = {
+            Page = ScriptBloxPage,
+            Scale = ScriptBloxScale,
+            Button = ScriptBloxButton
+        },
 
-    local OutgoingScale = GoingToSettings and ExecutionScale or SettingsScale
-    local IncomingScale = GoingToSettings and SettingsScale or ExecutionScale
+        Settings = {
+            Page = SettingsPage,
+            Scale = SettingsScale,
+            Button = SettingsButton
+        }
+    }
 
-    local Direction = GoingToSettings and 1 or -1
+    local PageOrder = {
+        Execution = 1,
+        ScriptBlox = 2,
+        Settings = 3
+    }
+
+    local Previous = Pages[CurrentPage]
+    local Incoming = Pages[Target]
+
+    local Direction
+
+    if PageOrder[Target] > PageOrder[CurrentPage] then
+        Direction = 1
+    else
+        Direction = -1
+    end
 
     CurrentPage = Target
 
-    IncomingPage.Visible = true
-    IncomingPage.GroupTransparency = 1
-    IncomingPage.Position = UDim2.new(0, Direction * 10, 0, 0)
-    IncomingScale.Scale = 0.985
+    Incoming.Page.Visible = true
+    Incoming.Page.GroupTransparency = 1
+    Incoming.Page.Position = UDim2.new(
+        0,
+        Direction * 10,
+        0,
+        0
+    )
+
+    Incoming.Scale.Scale = 0.985
 
     Tween(
-        OutgoingPage,
+        Previous.Page,
         0.16,
         {
             GroupTransparency = 1,
-            Position = UDim2.new(0, -Direction * 10, 0, 0)
+            Position = UDim2.new(
+                0,
+                -Direction * 10,
+                0,
+                0
+            )
         },
         Enum.EasingStyle.Quint,
         Enum.EasingDirection.In
     )
 
     Tween(
-        OutgoingScale,
+        Previous.Scale,
         0.16,
         {
             Scale = 0.985
@@ -1830,7 +2659,7 @@ local function SwitchPage(Target)
 
     task.delay(0.035, function()
         Tween(
-            IncomingPage,
+            Incoming.Page,
             0.25,
             {
                 GroupTransparency = 0,
@@ -1841,7 +2670,7 @@ local function SwitchPage(Target)
         )
 
         Tween(
-            IncomingScale,
+            Incoming.Scale,
             0.25,
             {
                 Scale = 1
@@ -1851,54 +2680,36 @@ local function SwitchPage(Target)
         )
     end)
 
-    task.delay(0.18, function()
-        OutgoingPage.Visible = false
-        OutgoingPage.Position = UDim2.fromScale(0, 0)
-        OutgoingPage.GroupTransparency = 0
-        OutgoingScale.Scale = 1
-    end)
-
-    if GoingToSettings then
-        Tween(
-            SettingsButton,
-            0.2,
-            {
-                BackgroundTransparency = 0.82,
-                BackgroundColor3 = Config.Colors.SurfaceLight,
-                TextColor3 = Config.Colors.Text
-            }
-        )
-
-        Tween(
-            ExecutionButton,
-            0.2,
-            {
-                BackgroundTransparency = 1,
-                BackgroundColor3 = Config.Colors.Surface,
-                TextColor3 = Config.Colors.SecondaryText
-            }
-        )
-    else
-        Tween(
-            ExecutionButton,
-            0.2,
-            {
-                BackgroundTransparency = 0,
-                BackgroundColor3 = Config.Colors.Accent,
-                TextColor3 = Color3.fromRGB(255, 255, 255)
-            }
-        )
-
-        Tween(
-            SettingsButton,
-            0.2,
-            {
-                BackgroundTransparency = 1,
-                BackgroundColor3 = Config.Colors.Surface,
-                TextColor3 = Config.Colors.SecondaryText
-            }
-        )
+    for Name, Data in pairs(Pages) do
+        if Name == Target then
+            Tween(
+                Data.Button,
+                0.2,
+                {
+                    BackgroundTransparency = 0,
+                    BackgroundColor3 = Config.Colors.Accent,
+                    TextColor3 = Config.Colors.Text
+                }
+            )
+        else
+            Tween(
+                Data.Button,
+                0.2,
+                {
+                    BackgroundTransparency = 1,
+                    BackgroundColor3 = Config.Colors.Surface,
+                    TextColor3 = Config.Colors.SecondaryText
+                }
+            )
+        end
     end
+
+    task.delay(0.18, function()
+        Previous.Page.Visible = false
+        Previous.Page.Position = UDim2.fromScale(0, 0)
+        Previous.Page.GroupTransparency = 0
+        Previous.Scale.Scale = 1
+    end)
 
     task.delay(0.29, function()
         PageSwitching = false
@@ -1981,16 +2792,54 @@ ExecutionButton.MouseLeave:Connect(function()
     end
 end)
 
+ScriptBloxButton.MouseEnter:Connect(function()
+    if CurrentPage ~= "ScriptBlox" then
+        Tween(ScriptBloxButton, 0.15, {
+            BackgroundTransparency = 0.9,
+            BackgroundColor3 = Config.Colors.SurfaceLight
+        })
+    else
+        Tween(ScriptBloxButton, 0.15, {
+            BackgroundColor3 = Config.Colors.AccentHover
+        })
+    end
+end)
+
+ScriptBloxButton.MouseLeave:Connect(function()
+    if CurrentPage == "ScriptBlox" then
+        Tween(ScriptBloxButton, 0.15, {
+            BackgroundColor3 = Config.Colors.Accent
+        })
+    else
+        Tween(ScriptBloxButton, 0.15, {
+            BackgroundTransparency = 1,
+            BackgroundColor3 = Config.Colors.Surface
+        })
+    end
+end)
+
 SettingsButton.MouseEnter:Connect(function()
-    Tween(SettingsButton, 0.15, {
-        BackgroundTransparency = 0.82
-    })
+    if CurrentPage ~= "Settings" then
+        Tween(SettingsButton, 0.15, {
+            BackgroundTransparency = 0.9,
+            BackgroundColor3 = Config.Colors.SurfaceLight
+        })
+    else
+        Tween(SettingsButton, 0.15, {
+            BackgroundColor3 = Config.Colors.AccentHover
+        })
+    end
 end)
 
 SettingsButton.MouseLeave:Connect(function()
-    if CurrentPage ~= "Settings" then
+    if CurrentPage == "Settings" then
         Tween(SettingsButton, 0.15, {
-            BackgroundTransparency = 1
+            BackgroundColor3 = Config.Colors.Accent
+        })
+    else
+        Tween(SettingsButton, 0.15, {
+            BackgroundTransparency = 1,
+            BackgroundColor3 = Config.Colors.Surface
         })
     end
 end)
@@ -2036,6 +2885,10 @@ MiniButton.MouseButton1Click:Connect(function()
     end)
 end)
 
+ScriptBloxButton.MouseButton1Click:Connect(function()
+    SwitchPage("ScriptBlox")
+end)
+
 ExecutionButton.MouseButton1Click:Connect(function()
     SwitchPage("Execution")
 end)
@@ -2058,13 +2911,14 @@ local function ConnectCameraViewport()
         return
     end
 
-    CameraViewportConnection = Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-        UpdateLayout()
+    CameraViewportConnection =
+        Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+            UpdateLayout()
 
-        if MiniButton.Visible then
-            UpdateMiniButtonPosition()
-        end
-    end)
+            if MiniButton.Visible then
+                UpdateMiniButtonPosition()
+            end
+        end)
 end
 
 Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
