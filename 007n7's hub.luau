@@ -93,6 +93,26 @@ local Config = {
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
+local function FindExistingHub()
+    local ExistingHub
+
+    pcall(function()
+        ExistingHub = CoreGui:FindFirstChild("007n7sHub", true)
+    end)
+
+    if ExistingHub then
+        return ExistingHub
+    end
+
+    ExistingHub = PlayerGui:FindFirstChild("007n7sHub", true)
+
+    return ExistingHub
+end
+
+if FindExistingHub() then
+    return
+end
+
 local Camera = Workspace.CurrentCamera
 local CameraViewportConnection
 
