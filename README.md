@@ -40,6 +40,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/Teamc00lgui/007n7-s-h
 
 - CoreGuard
 - Professional code executor
+- ScriptBlox integration
 - Custom settings
 
 ## Credits
