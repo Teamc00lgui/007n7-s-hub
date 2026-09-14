@@ -43,7 +43,6 @@ _TBA_
 ## Credits
 
 - Created and maintained by **x_c00lkidd_x**.
-- Original c00lgui by **007n7/c00lkidd**.
 
 _Please give credit if you repost or modify the project._
 
