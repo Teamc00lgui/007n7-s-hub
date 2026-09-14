@@ -146,6 +146,7 @@ local ScreenGui = Create("ScreenGui", {
     ResetOnSpawn = false,
     ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
     IgnoreGuiInset = true,
+    DisplayOrder = 100,
     Parent = CoreGui
 })
 
@@ -167,6 +168,10 @@ local function GetWindowSize()
 end
 
 local InitialSize = GetWindowSize()
+local FullWindowSize = InitialSize
+local CurrentTitleHeight = 50
+local Collapsed = false
+local CurrentPage = "Execution"
 
 local Window = Create("Frame", {
     Name = "Window",
@@ -175,7 +180,7 @@ local Window = Create("Frame", {
     AnchorPoint = Vector2.new(0.5, 0.5),
     BackgroundColor3 = Config.Colors.Background,
     BorderSizePixel = 0,
-    ClipsDescendants = true,
+    ClipsDescendants = false,
     Parent = ScreenGui
 })
 
@@ -214,6 +219,16 @@ local TitleBar = Create("Frame", {
 })
 
 AddCorner(TitleBar, 14)
+
+local TitleBarFill = Create("Frame", {
+    Name = "TitleBarFill",
+    Size = UDim2.new(1, 0, 0, 16),
+    Position = UDim2.new(0, 0, 1, -16),
+    BackgroundColor3 = Config.Colors.Accent,
+    BorderSizePixel = 0,
+    ZIndex = 5,
+    Parent = TitleBar
+})
 
 local Title = Create("TextLabel", {
     Name = "Title",
@@ -262,6 +277,25 @@ local MinimizeButton = Create("TextButton", {
 
 AddCorner(MinimizeButton, 9)
 
+local ExpandButton = Create("TextButton", {
+    Name = "ExpandButton",
+    Size = UDim2.fromOffset(32, 32),
+    Position = UDim2.new(1, -72, 0.5, -16),
+    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+    BackgroundTransparency = 0.88,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Text = "□",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 16,
+    Font = Enum.Font.GothamBold,
+    Visible = false,
+    ZIndex = 7,
+    Parent = TitleBar
+})
+
+AddCorner(ExpandButton, 9)
+
 local CloseButton = Create("TextButton", {
     Name = "CloseButton",
     Size = UDim2.fromOffset(32, 32),
@@ -280,15 +314,20 @@ local CloseButton = Create("TextButton", {
 
 AddCorner(CloseButton, 9)
 
-local Content = Create("Frame", {
+local Content = Create("CanvasGroup", {
     Name = "Content",
     Size = UDim2.new(1, 0, 1, -50),
     Position = UDim2.fromOffset(0, 50),
     BackgroundColor3 = Config.Colors.Background,
+    BackgroundTransparency = 0,
     BorderSizePixel = 0,
+    ClipsDescendants = true,
+    GroupTransparency = 0,
     ZIndex = 3,
     Parent = Window
 })
+
+AddCorner(Content, 14)
 
 local Sidebar = Create("Frame", {
     Name = "Sidebar",
@@ -394,6 +433,11 @@ local ExecutionPage = Create("Frame", {
     Parent = MainArea
 })
 
+local ExecutionScale = Create("UIScale", {
+    Scale = 1,
+    Parent = ExecutionPage
+})
+
 local PageTitle = Create("TextLabel", {
     Size = UDim2.new(1, -32, 0, 26),
     Position = UDim2.fromOffset(16, 14),
@@ -474,6 +518,11 @@ local SettingsPage = Create("Frame", {
     Parent = MainArea
 })
 
+local SettingsScale = Create("UIScale", {
+    Scale = 1,
+    Parent = SettingsPage
+})
+
 local SettingsTitle = Create("TextLabel", {
     Size = UDim2.new(1, -32, 0, 26),
     Position = UDim2.fromOffset(16, 14),
@@ -546,6 +595,31 @@ local AboutCreator = Create("TextLabel", {
     Parent = AboutCard
 })
 
+local MiniButton = Create("TextButton", {
+    Name = "ReopenButton",
+    Size = UDim2.fromOffset(Config.MinimizedSize, Config.MinimizedSize),
+    Position = UDim2.fromOffset(12, 12),
+    BackgroundColor3 = Config.Colors.Accent,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Text = "7",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    Visible = false,
+    ZIndex = 100,
+    Parent = ScreenGui
+})
+
+AddCorner(MiniButton, 8)
+
+local MiniButtonStroke = AddStroke(
+    MiniButton,
+    Config.Colors.AccentHover,
+    1,
+    0.15
+)
+
 local Dragging = false
 local DragStart
 local StartPosition
@@ -586,6 +660,15 @@ UserInputService.InputChanged:Connect(function(Input)
     )
 end)
 
+local function UpdateMiniButtonPosition()
+    local TopLeftInset = GuiService:GetGuiInset()
+
+    MiniButton.Position = UDim2.fromOffset(
+        math.max(8, TopLeftInset.X + 8),
+        math.max(8, TopLeftInset.Y + 8)
+    )
+end
+
 local function UpdateLayout()
     if not Camera then
         Camera = Workspace.CurrentCamera
@@ -609,12 +692,26 @@ local function UpdateLayout()
         WindowSize = Config.DesktopSize
     end
 
-    Window.Size = UDim2.fromOffset(WindowSize.X, WindowSize.Y)
+    FullWindowSize = WindowSize
 
     local Compact = Mobile or WindowSize.X < 580
 
     local TitleHeight = Compact and 46 or 50
     local SidebarWidth = Compact and 105 or 135
+
+    CurrentTitleHeight = TitleHeight
+
+    if Collapsed then
+        Window.Size = UDim2.fromOffset(
+            WindowSize.X,
+            TitleHeight
+        )
+    else
+        Window.Size = UDim2.fromOffset(
+            WindowSize.X,
+            WindowSize.Y
+        )
+    end
 
     TitleBar.Size = UDim2.new(1, 0, 0, TitleHeight)
 
@@ -629,6 +726,10 @@ local function UpdateLayout()
     MinimizeButton.Size = UDim2.fromOffset(29, 29)
     MinimizeButton.Position = UDim2.new(1, -64, 0.5, -14.5)
     MinimizeButton.TextSize = Compact and 14 or 16
+
+    ExpandButton.Size = UDim2.fromOffset(29, 29)
+    ExpandButton.Position = UDim2.new(1, -64, 0.5, -14.5)
+    ExpandButton.TextSize = Compact and 14 or 16
 
     CloseButton.Size = UDim2.fromOffset(29, 29)
     CloseButton.Position = UDim2.new(1, -34, 0.5, -14.5)
@@ -701,8 +802,115 @@ local function UpdateLayout()
     AboutCreator.TextSize = Compact and 9 or 11
 end
 
+local function CollapseWindow()
+    if Collapsed then
+        return
+    end
+
+    Collapsed = true
+
+    local TargetHeight = CurrentTitleHeight
+    local TargetWidth = FullWindowSize.X
+
+    local ContentAnimation = Tween(Content, 0.18, {
+        GroupTransparency = 1
+    })
+
+    ContentAnimation.Completed:Connect(function()
+        Content.Visible = false
+    end)
+
+    Tween(Window, 0.3, {
+        Size = UDim2.fromOffset(
+            TargetWidth,
+            TargetHeight
+        )
+    })
+
+    Tween(MinimizeButton, 0.18, {
+        BackgroundTransparency = 1,
+        TextTransparency = 1
+    }).Completed:Connect(function()
+        MinimizeButton.Visible = false
+        MinimizeButton.BackgroundTransparency = 0.88
+        MinimizeButton.TextTransparency = 0
+
+        ExpandButton.Visible = true
+        ExpandButton.BackgroundTransparency = 1
+        ExpandButton.TextTransparency = 1
+
+        Tween(ExpandButton, 0.2, {
+            BackgroundTransparency = 0.88,
+            TextTransparency = 0
+        })
+    end)
+end
+
+local function ExpandWindow()
+    if not Collapsed then
+        return
+    end
+
+    Collapsed = false
+
+    Content.Visible = true
+    Content.GroupTransparency = 1
+
+    Window.Size = UDim2.fromOffset(
+        FullWindowSize.X,
+        CurrentTitleHeight
+    )
+
+    Tween(Window, 0.3, {
+        Size = UDim2.fromOffset(
+            FullWindowSize.X,
+            FullWindowSize.Y
+        )
+    })
+
+    Tween(Content, 0.25, {
+        GroupTransparency = 0
+    })
+
+    Tween(ExpandButton, 0.15, {
+        BackgroundTransparency = 1,
+        TextTransparency = 1
+    }).Completed:Connect(function()
+        ExpandButton.Visible = false
+        ExpandButton.BackgroundTransparency = 0.88
+        ExpandButton.TextTransparency = 0
+
+        MinimizeButton.Visible = true
+        MinimizeButton.BackgroundTransparency = 1
+        MinimizeButton.TextTransparency = 1
+
+        Tween(MinimizeButton, 0.2, {
+            BackgroundTransparency = 0.88,
+            TextTransparency = 0
+        })
+    end)
+end
+
 local function ShowWindow()
+    Collapsed = false
+
+    FullWindowSize = GetWindowSize()
+
     Window.Visible = true
+    Window.Size = UDim2.fromOffset(
+        FullWindowSize.X,
+        FullWindowSize.Y
+    )
+
+    Content.Visible = true
+    Content.GroupTransparency = 0
+
+    MinimizeButton.Visible = true
+    ExpandButton.Visible = false
+
+    MinimizeButton.BackgroundTransparency = 0.88
+    MinimizeButton.TextTransparency = 0
+
     WindowScale.Scale = 0.92
 
     Tween(WindowScale, 0.3, {
@@ -720,66 +928,80 @@ local function HideWindow()
     end)
 end
 
-local MiniButton = Create("TextButton", {
-    Name = "ReopenButton",
-    Size = UDim2.fromOffset(Config.MinimizedSize, Config.MinimizedSize),
-    Position = UDim2.fromOffset(12, 12),
-    BackgroundColor3 = Config.Colors.Accent,
-    BorderSizePixel = 0,
-    AutoButtonColor = false,
-    Text = "7",
-    TextColor3 = Color3.fromRGB(255, 255, 255),
-    TextSize = 14,
-    Font = Enum.Font.GothamBold,
-    Visible = false,
-    Parent = ScreenGui
-})
+local function CloseWindow()
+    Collapsed = false
 
-AddCorner(MiniButton, 8)
+    Content.Visible = true
+    Content.GroupTransparency = 0
 
-local MiniButtonStroke = AddStroke(
-    MiniButton,
-    Config.Colors.AccentHover,
-    1,
-    0.15
-)
-
-local MiniButtonInset = Create("Frame", {
-    Name = "SafeArea",
-    Size = UDim2.fromOffset(1, 1),
-    Position = UDim2.fromOffset(0, 0),
-    BackgroundTransparency = 1,
-    Parent = MiniButton
-})
-
-local function UpdateMiniButtonPosition()
-    local TopLeftInset = GuiService:GetGuiInset()
-
-    MiniButton.Position = UDim2.fromOffset(
-        math.max(8, TopLeftInset.X + 8),
-        math.max(8, TopLeftInset.Y + 8)
+    Window.Size = UDim2.fromOffset(
+        FullWindowSize.X,
+        FullWindowSize.Y
     )
+
+    MinimizeButton.Visible = true
+    ExpandButton.Visible = false
+
+    MinimizeButton.BackgroundTransparency = 0.88
+    MinimizeButton.TextTransparency = 0
+
+    HideWindow()
+
+    task.delay(0.22, function()
+        MiniButton.Visible = true
+        MiniButton.Size = UDim2.fromOffset(0, 0)
+
+        UpdateMiniButtonPosition()
+
+        Tween(MiniButton, 0.25, {
+            Size = UDim2.fromOffset(
+                Config.MinimizedSize,
+                Config.MinimizedSize
+            )
+        })
+    end)
 end
 
 local function SwitchPage(Target)
-    local GoingToSettings = Target == "Settings"
-    local CurrentPage = GoingToSettings and ExecutionPage or SettingsPage
-    local TargetPage = GoingToSettings and SettingsPage or ExecutionPage
-
-    if TargetPage.Visible then
+    if Target == CurrentPage then
         return
     end
 
-    TargetPage.Visible = true
-    TargetPage.Position = UDim2.fromScale(GoingToSettings and 1 or -1, 0)
+    local GoingToSettings = Target == "Settings"
+    local OutgoingPage = GoingToSettings and ExecutionPage or SettingsPage
+    local IncomingPage = GoingToSettings and SettingsPage or ExecutionPage
+    local OutgoingScale = GoingToSettings and ExecutionScale or SettingsScale
+    local IncomingScale = GoingToSettings and SettingsScale or ExecutionScale
 
-    Tween(CurrentPage, 0.28, {
-        Position = UDim2.fromScale(GoingToSettings and -1 or 1, 0)
+    CurrentPage = Target
+
+    local Direction = GoingToSettings and 1 or -1
+
+    IncomingPage.Visible = true
+    IncomingPage.Position = UDim2.new(0, Direction * 24, 0, 0)
+    IncomingScale.Scale = 0.985
+
+    Tween(OutgoingPage, 0.22, {
+        Position = UDim2.new(0, -Direction * 24, 0, 0)
     })
 
-    Tween(TargetPage, 0.28, {
+    Tween(OutgoingScale, 0.22, {
+        Scale = 0.985
+    })
+
+    Tween(IncomingPage, 0.28, {
         Position = UDim2.fromScale(0, 0)
     })
+
+    Tween(IncomingScale, 0.28, {
+        Scale = 1
+    })
+
+    task.delay(0.23, function()
+        OutgoingPage.Visible = false
+        OutgoingPage.Position = UDim2.fromScale(0, 0)
+        OutgoingScale.Scale = 1
+    end)
 
     if GoingToSettings then
         Tween(SettingsButton, 0.2, {
@@ -806,10 +1028,6 @@ local function SwitchPage(Target)
             TextColor3 = Config.Colors.SecondaryText
         })
     end
-
-    task.delay(0.3, function()
-        CurrentPage.Visible = false
-    end)
 end
 
 CloseButton.MouseEnter:Connect(function()
@@ -836,6 +1054,18 @@ MinimizeButton.MouseLeave:Connect(function()
     })
 end)
 
+ExpandButton.MouseEnter:Connect(function()
+    Tween(ExpandButton, 0.15, {
+        BackgroundTransparency = 0.7
+    })
+end)
+
+ExpandButton.MouseLeave:Connect(function()
+    Tween(ExpandButton, 0.15, {
+        BackgroundTransparency = 0.88
+    })
+end)
+
 ExecuteButton.MouseEnter:Connect(function()
     Tween(ExecuteButton, 0.15, {
         BackgroundColor3 = Config.Colors.AccentHover
@@ -849,7 +1079,7 @@ ExecuteButton.MouseLeave:Connect(function()
 end)
 
 ExecutionButton.MouseEnter:Connect(function()
-    if ExecutionPage.Visible then
+    if CurrentPage == "Execution" then
         Tween(ExecutionButton, 0.15, {
             BackgroundColor3 = Config.Colors.AccentHover
         })
@@ -857,7 +1087,7 @@ ExecutionButton.MouseEnter:Connect(function()
 end)
 
 ExecutionButton.MouseLeave:Connect(function()
-    if ExecutionPage.Visible then
+    if CurrentPage == "Execution" then
         Tween(ExecutionButton, 0.15, {
             BackgroundColor3 = Config.Colors.Accent
         })
@@ -871,7 +1101,7 @@ SettingsButton.MouseEnter:Connect(function()
 end)
 
 SettingsButton.MouseLeave:Connect(function()
-    if not SettingsPage.Visible then
+    if CurrentPage ~= "Settings" then
         Tween(SettingsButton, 0.15, {
             BackgroundTransparency = 1
         })
@@ -879,21 +1109,15 @@ SettingsButton.MouseLeave:Connect(function()
 end)
 
 CloseButton.MouseButton1Click:Connect(function()
-    HideWindow()
+    CloseWindow()
+end)
 
-    task.delay(0.22, function()
-        MiniButton.Visible = true
-        MiniButton.Size = UDim2.fromOffset(0, 0)
+MinimizeButton.MouseButton1Click:Connect(function()
+    CollapseWindow()
+end)
 
-        UpdateMiniButtonPosition()
-
-        Tween(MiniButton, 0.25, {
-            Size = UDim2.fromOffset(
-                Config.MinimizedSize,
-                Config.MinimizedSize
-            )
-        })
-    end)
+ExpandButton.MouseButton1Click:Connect(function()
+    ExpandWindow()
 end)
 
 MiniButton.MouseEnter:Connect(function()
@@ -925,73 +1149,6 @@ MiniButton.MouseButton1Click:Connect(function()
     end)
 end)
 
-MinimizeButton.MouseButton1Click:Connect(function()
-    local CurrentHeight = Window.AbsoluteSize.Y
-
-    Tween(WindowScale, 0.25, {
-        Scale = 0.98
-    })
-
-    task.delay(0.12, function()
-        Content.Visible = false
-
-        Tween(Window, 0.28, {
-            Size = UDim2.fromOffset(
-                math.max(190, Window.AbsoluteSize.X),
-                50
-            )
-        })
-    end)
-
-    MinimizeButton.Text = "□"
-
-    Tween(MinimizeButton, 0.2, {
-        BackgroundTransparency = 0.72
-    })
-end)
-
-TitleBar.InputBegan:Connect(function(Input)
-    if MinimizeButton.Text ~= "□" then
-        return
-    end
-
-    if Input.UserInputType ~= Enum.UserInputType.MouseButton1
-        and Input.UserInputType ~= Enum.UserInputType.Touch then
-        return
-    end
-
-    if Input.Position.X >= MinimizeButton.AbsolutePosition.X
-        and Input.Position.X <= MinimizeButton.AbsolutePosition.X + MinimizeButton.AbsoluteSize.X then
-        return
-    end
-
-    if Input.Position.X >= CloseButton.AbsolutePosition.X
-        and Input.Position.X <= CloseButton.AbsolutePosition.X + CloseButton.AbsoluteSize.X then
-        return
-    end
-
-    Content.Visible = true
-    Window.Size = UDim2.fromOffset(
-        GetWindowSize().X,
-        50
-    )
-
-    local TargetSize = GetWindowSize()
-
-    Tween(Window, 0.28, {
-        Size = UDim2.fromOffset(
-            TargetSize.X,
-            TargetSize.Y
-        )
-    })
-
-    MinimizeButton.Text = "—"
-
-    Tween(MinimizeButton, 0.2, {
-        BackgroundTransparency = 0.88
-    })
-end)
-
 ExecutionButton.MouseButton1Click:Connect(function()
     SwitchPage("Execution")
 end)
@@ -1017,7 +1174,13 @@ Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
     Camera = Workspace.CurrentCamera
 
     if Camera then
-        Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateLayout)
+        Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+            UpdateLayout()
+
+            if MiniButton.Visible then
+                UpdateMiniButtonPosition()
+            end
+        end)
     end
 
     UpdateLayout()
