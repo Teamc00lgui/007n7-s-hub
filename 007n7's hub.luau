@@ -83,7 +83,10 @@ local Config = {
         AccentHover = Color3.fromRGB(35, 185, 255),
         Text = Color3.fromRGB(245, 247, 250),
         SecondaryText = Color3.fromRGB(160, 165, 175),
-        MutedText = Color3.fromRGB(95, 100, 110)
+        MutedText = Color3.fromRGB(95, 100, 110),
+        Success = Color3.fromRGB(75, 220, 145),
+        Error = Color3.fromRGB(255, 90, 90),
+        Warning = Color3.fromRGB(255, 190, 75)
     }
 }
 
@@ -153,6 +156,25 @@ local function BindAutoScroll(ScrollingFrame, Content, Layout)
     Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(Update)
     ScrollingFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(Update)
     Content:GetPropertyChangedSignal("AbsoluteSize"):Connect(Update)
+
+    task.defer(Update)
+
+    return Update
+end
+
+local function BindInnerScroll(ScrollingFrame, Content)
+    local function Update()
+        local ContentHeight = Content.AbsoluteSize.Y + 18
+        local ViewportHeight = ScrollingFrame.AbsoluteSize.Y
+
+        ScrollingFrame.CanvasSize = UDim2.fromOffset(
+            0,
+            math.max(ContentHeight, ViewportHeight)
+        )
+    end
+
+    Content:GetPropertyChangedSignal("AbsoluteSize"):Connect(Update)
+    ScrollingFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(Update)
 
     task.defer(Update)
 
@@ -494,7 +516,7 @@ local ExecutionContent = Create("Frame", {
 })
 
 local ExecutionLayout = Create("UIListLayout", {
-    Padding = UDim.new(0, 0),
+    Padding = UDim.new(0, 10),
     SortOrder = Enum.SortOrder.LayoutOrder,
     Parent = ExecutionContent
 })
@@ -536,11 +558,84 @@ local PageDescription = Create("TextLabel", {
     Parent = ExecutionContent
 })
 
-local Editor = Create("TextBox", {
-    Name = "Editor",
-    Size = UDim2.new(1, -22, 0, 230),
+local EditorCard = Create("Frame", {
+    Name = "EditorCard",
+    Size = UDim2.new(1, 0, 0, 205),
     LayoutOrder = 3,
     BackgroundColor3 = Color3.fromRGB(10, 12, 15),
+    BorderSizePixel = 0,
+    Parent = ExecutionContent
+})
+
+AddCorner(EditorCard, 10)
+AddStroke(EditorCard, Config.Colors.Border, 1, 0.25)
+
+local EditorHeader = Create("Frame", {
+    Name = "EditorHeader",
+    Size = UDim2.new(1, 0, 0, 31),
+    BackgroundColor3 = Config.Colors.Surface,
+    BackgroundTransparency = 0.25,
+    BorderSizePixel = 0,
+    Parent = EditorCard
+})
+
+AddCorner(EditorHeader, 10)
+
+local EditorHeaderFill = Create("Frame", {
+    Size = UDim2.new(1, 0, 0, 12),
+    Position = UDim2.new(0, 0, 1, -12),
+    BackgroundColor3 = Config.Colors.Surface,
+    BackgroundTransparency = 0.25,
+    BorderSizePixel = 0,
+    Parent = EditorHeader
+})
+
+local EditorTitle = Create("TextLabel", {
+    Size = UDim2.new(0.5, -10, 1, 0),
+    Position = UDim2.fromOffset(11, 0),
+    BackgroundTransparency = 1,
+    Text = "CODE",
+    TextColor3 = Config.Colors.Text,
+    TextSize = 9,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = EditorHeader
+})
+
+local LineCount = Create("TextLabel", {
+    Size = UDim2.new(0.5, -10, 1, 0),
+    Position = UDim2.new(0.5, 0, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "0 lines",
+    TextColor3 = Config.Colors.MutedText,
+    TextSize = 9,
+    Font = Enum.Font.Code,
+    TextXAlignment = Enum.TextXAlignment.Right,
+    Parent = EditorHeader
+})
+
+local EditorScroll = Create("ScrollingFrame", {
+    Name = "EditorScroll",
+    Size = UDim2.new(1, -2, 1, -32),
+    Position = UDim2.fromOffset(1, 32),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    CanvasSize = UDim2.fromOffset(0, 0),
+    ScrollingDirection = Enum.ScrollingDirection.Y,
+    ScrollBarThickness = 4,
+    ScrollBarImageColor3 = Config.Colors.Border,
+    ScrollBarImageTransparency = 0.15,
+    ScrollingEnabled = true,
+    AutomaticCanvasSize = Enum.AutomaticSize.None,
+    Parent = EditorCard
+})
+
+local Editor = Create("TextBox", {
+    Name = "Editor",
+    Size = UDim2.new(1, -22, 0, 170),
+    AutomaticSize = Enum.AutomaticSize.Y,
+    Position = UDim2.fromOffset(11, 9),
+    BackgroundTransparency = 1,
     BorderSizePixel = 0,
     ClearTextOnFocus = false,
     MultiLine = true,
@@ -553,24 +648,40 @@ local Editor = Create("TextBox", {
     TextXAlignment = Enum.TextXAlignment.Left,
     TextYAlignment = Enum.TextYAlignment.Top,
     TextWrapped = false,
+    Parent = EditorScroll
+})
+
+local EditorPadding = Create("UIPadding", {
+    PaddingTop = UDim.new(0, 1),
+    PaddingBottom = UDim.new(0, 12),
+    PaddingLeft = UDim.new(0, 1),
+    PaddingRight = UDim.new(0, 1),
+    Parent = Editor
+})
+
+local EditorScrollUpdate = BindInnerScroll(EditorScroll, Editor)
+
+local ActionBar = Create("Frame", {
+    Name = "ActionBar",
+    Size = UDim2.new(1, 0, 0, 36),
+    LayoutOrder = 4,
+    BackgroundTransparency = 1,
     Parent = ExecutionContent
 })
 
-AddCorner(Editor, 10)
-AddStroke(Editor, Config.Colors.Border, 1, 0.25)
-
-Create("UIPadding", {
-    PaddingTop = UDim.new(0, 11),
-    PaddingBottom = UDim.new(0, 11),
-    PaddingLeft = UDim.new(0, 11),
-    PaddingRight = UDim.new(0, 11),
-    Parent = Editor
+local ActionLayout = Create("UIListLayout", {
+    FillDirection = Enum.FillDirection.Horizontal,
+    HorizontalAlignment = Enum.HorizontalAlignment.Left,
+    VerticalAlignment = Enum.VerticalAlignment.Center,
+    Padding = UDim.new(0, 7),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Parent = ActionBar
 })
 
 local ExecuteButton = Create("TextButton", {
     Name = "Execute",
     Size = UDim2.fromOffset(105, 36),
-    LayoutOrder = 4,
+    LayoutOrder = 1,
     BackgroundColor3 = Config.Colors.Accent,
     BorderSizePixel = 0,
     AutoButtonColor = false,
@@ -578,37 +689,323 @@ local ExecuteButton = Create("TextButton", {
     TextColor3 = Color3.fromRGB(255, 255, 255),
     TextSize = 12,
     Font = Enum.Font.GothamBold,
-    Parent = ExecutionContent
+    Parent = ActionBar
 })
 
 AddCorner(ExecuteButton, 9)
 
-ExecuteButton.MouseButton1Click:Connect(function()
+local ClearButton = Create("TextButton", {
+    Name = "Clear",
+    Size = UDim2.fromOffset(105, 36),
+    LayoutOrder = 2,
+    BackgroundColor3 = Config.Colors.SurfaceLight,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Text = "Clear",
+    TextColor3 = Config.Colors.Text,
+    TextSize = 12,
+    Font = Enum.Font.GothamBold,
+    Parent = ActionBar
+})
+
+AddCorner(ClearButton, 9)
+AddStroke(ClearButton, Config.Colors.Border, 1, 0.2)
+
+local ExecutionStatus = Create("TextLabel", {
+    Name = "ExecutionStatus",
+    Size = UDim2.new(1, -230, 0, 36),
+    LayoutOrder = 3,
+    BackgroundTransparency = 1,
+    Text = "Ready",
+    TextColor3 = Config.Colors.MutedText,
+    TextSize = 9,
+    Font = Enum.Font.Code,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    TextYAlignment = Enum.TextYAlignment.Center,
+    Parent = ActionBar
+})
+
+local OutputCard = Create("Frame", {
+    Name = "OutputCard",
+    Size = UDim2.new(1, 0, 0, 145),
+    LayoutOrder = 5,
+    BackgroundColor3 = Color3.fromRGB(10, 12, 15),
+    BorderSizePixel = 0,
+    Parent = ExecutionContent
+})
+
+AddCorner(OutputCard, 10)
+AddStroke(OutputCard, Config.Colors.Border, 1, 0.25)
+
+local OutputHeader = Create("Frame", {
+    Name = "OutputHeader",
+    Size = UDim2.new(1, 0, 0, 31),
+    BackgroundColor3 = Config.Colors.Surface,
+    BackgroundTransparency = 0.25,
+    BorderSizePixel = 0,
+    Parent = OutputCard
+})
+
+AddCorner(OutputHeader, 10)
+
+local OutputHeaderFill = Create("Frame", {
+    Size = UDim2.new(1, 0, 0, 12),
+    Position = UDim2.new(0, 0, 1, -12),
+    BackgroundColor3 = Config.Colors.Surface,
+    BackgroundTransparency = 0.25,
+    BorderSizePixel = 0,
+    Parent = OutputHeader
+})
+
+local OutputTitle = Create("TextLabel", {
+    Size = UDim2.new(0.5, -10, 1, 0),
+    Position = UDim2.fromOffset(11, 0),
+    BackgroundTransparency = 1,
+    Text = "OUTPUT",
+    TextColor3 = Config.Colors.Text,
+    TextSize = 9,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = OutputHeader
+})
+
+local OutputStatus = Create("TextLabel", {
+    Size = UDim2.new(0.5, -10, 1, 0),
+    Position = UDim2.new(0.5, 0, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "Ready",
+    TextColor3 = Config.Colors.MutedText,
+    TextSize = 9,
+    Font = Enum.Font.Code,
+    TextXAlignment = Enum.TextXAlignment.Right,
+    Parent = OutputHeader
+})
+
+local OutputScroll = Create("ScrollingFrame", {
+    Name = "OutputScroll",
+    Size = UDim2.new(1, -2, 1, -32),
+    Position = UDim2.fromOffset(1, 32),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    CanvasSize = UDim2.fromOffset(0, 0),
+    ScrollingDirection = Enum.ScrollingDirection.Y,
+    ScrollBarThickness = 4,
+    ScrollBarImageColor3 = Config.Colors.Border,
+    ScrollBarImageTransparency = 0.15,
+    ScrollingEnabled = true,
+    AutomaticCanvasSize = Enum.AutomaticSize.None,
+    Parent = OutputCard
+})
+
+local Output = Create("TextLabel", {
+    Name = "Output",
+    Size = UDim2.new(1, -22, 0, 80),
+    AutomaticSize = Enum.AutomaticSize.Y,
+    Position = UDim2.fromOffset(11, 8),
+    BackgroundTransparency = 1,
+    Text = "[ 007n7's hub ] Ready.",
+    TextColor3 = Config.Colors.SecondaryText,
+    TextSize = 10,
+    Font = Enum.Font.Code,
+    TextWrapped = true,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    TextYAlignment = Enum.TextYAlignment.Top,
+    Parent = OutputScroll
+})
+
+local OutputScrollUpdate = BindInnerScroll(OutputScroll, Output)
+
+local function CountLines(Source)
+    if Source == "" then
+        return 0
+    end
+
+    local _, Count = Source:gsub("\n", "")
+
+    return Count + 1
+end
+
+local function UpdateLineCount()
+    local Count = CountLines(Editor.Text)
+
+    if Count == 1 then
+        LineCount.Text = "1 line"
+    else
+        LineCount.Text = tostring(Count) .. " lines"
+    end
+
+    task.defer(EditorScrollUpdate)
+end
+
+local function SetOutput(Text, Color, Status)
+    Output.Text = Text
+    Output.TextColor3 = Color or Config.Colors.SecondaryText
+    OutputStatus.Text = Status or "Ready"
+
+    task.defer(function()
+        OutputScrollUpdate()
+
+        OutputScroll.CanvasPosition = Vector2.new(
+            0,
+            math.max(0, OutputScroll.AbsoluteCanvasSize.Y)
+        )
+    end)
+end
+
+local function ExecuteScript()
     local Source = Editor.Text
 
     if Source:match("^%s*$") then
+        SetOutput(
+            "[ 007n7's hub ] Nothing to execute.",
+            Config.Colors.Warning,
+            "Empty"
+        )
+
+        ExecutionStatus.Text = "Nothing to execute"
+        ExecutionStatus.TextColor3 = Config.Colors.Warning
+
         return
     end
 
     local Loader = loadstring
 
     if type(Loader) ~= "function" then
-        warn("[007n7's hub]: loadstring is unavailable.")
+        SetOutput(
+            "[ 007n7's hub ] loadstring is unavailable.",
+            Config.Colors.Error,
+            "Unavailable"
+        )
+
+        ExecutionStatus.Text = "loadstring unavailable"
+        ExecutionStatus.TextColor3 = Config.Colors.Error
+
         return
     end
 
-    local Success, Result = pcall(function()
-        local Function, CompileError = Loader(Source)
+    ExecutionStatus.Text = "Compiling..."
+    ExecutionStatus.TextColor3 = Config.Colors.Accent
+    OutputStatus.Text = "Compiling"
 
-        if not Function then
-            error(CompileError)
-        end
+    local Started = os.clock()
 
-        return Function()
+    local CompileSuccess, Function, CompileError = pcall(function()
+        return Loader(Source)
     end)
 
-    if not Success then
-        warn("[007n7's hub]: " .. tostring(Result))
+    if not CompileSuccess then
+        local Message = tostring(Function)
+
+        SetOutput(
+            "[ COMPILE ERROR ]\n\n" .. Message,
+            Config.Colors.Error,
+            "Compile error"
+        )
+
+        ExecutionStatus.Text = "Compile error"
+        ExecutionStatus.TextColor3 = Config.Colors.Error
+
+        return
+    end
+
+    if not Function then
+        local Message = tostring(CompileError)
+
+        SetOutput(
+            "[ COMPILE ERROR ]\n\n" .. Message,
+            Config.Colors.Error,
+            "Compile error"
+        )
+
+        ExecutionStatus.Text = "Compile error"
+        ExecutionStatus.TextColor3 = Config.Colors.Error
+
+        return
+    end
+
+    ExecutionStatus.Text = "Executing..."
+    ExecutionStatus.TextColor3 = Config.Colors.Accent
+    OutputStatus.Text = "Executing"
+
+    local ExecutionSuccess, Result = pcall(Function)
+    local Duration = os.clock() - Started
+
+    if not ExecutionSuccess then
+        local Message = tostring(Result)
+
+        SetOutput(
+            "[ EXECUTION ERROR ]\n\n" .. Message .. "\n\nDuration: " .. string.format("%.3fs", Duration),
+            Config.Colors.Error,
+            "Execution error"
+        )
+
+        ExecutionStatus.Text = "Execution error"
+        ExecutionStatus.TextColor3 = Config.Colors.Error
+
+        return
+    end
+
+    local ResultText = ""
+
+    if Result ~= nil then
+        ResultText = "\n\nResult:\n" .. tostring(Result)
+    end
+
+    SetOutput(
+        "[ SUCCESS ]\n\nCode executed successfully.\n\nDuration: "
+            .. string.format("%.3fs", Duration)
+            .. ResultText,
+        Config.Colors.Success,
+        "Success"
+    )
+
+    ExecutionStatus.Text = "Executed in " .. string.format("%.3fs", Duration)
+    ExecutionStatus.TextColor3 = Config.Colors.Success
+end
+
+local function ClearExecution()
+    Editor.Text = ""
+
+    SetOutput(
+        "[ 007n7's hub ] Output cleared.",
+        Config.Colors.SecondaryText,
+        "Cleared"
+    )
+
+    ExecutionStatus.Text = "Ready"
+    ExecutionStatus.TextColor3 = Config.Colors.MutedText
+
+    UpdateLineCount()
+end
+
+Editor:GetPropertyChangedSignal("Text"):Connect(UpdateLineCount)
+
+ExecuteButton.MouseButton1Click:Connect(function()
+    ExecuteScript()
+end)
+
+ClearButton.MouseButton1Click:Connect(function()
+    ClearExecution()
+end)
+
+UserInputService.InputBegan:Connect(function(Input, Processed)
+    if Processed then
+        return
+    end
+
+    if not Editor:IsFocused() then
+        return
+    end
+
+    if Input.KeyCode == Enum.KeyCode.Return
+        and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+        ExecuteScript()
+        return
+    end
+
+    if Input.KeyCode == Enum.KeyCode.L
+        and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+        ClearExecution()
     end
 end)
 
@@ -1085,26 +1482,80 @@ local function UpdateLayout()
     PageTitle.TextSize = Compact and 16 or 20
     PageDescription.TextSize = Compact and 9 or 11
 
-    local EditorHeight = math.max(
-        150,
-        ExecutionScroll.AbsoluteSize.Y - (Compact and 112 or 125)
+    EditorCard.Size = UDim2.new(
+        1,
+        0,
+        0,
+        Compact and 175 or 205
     )
 
-    Editor.Size = UDim2.new(
+    EditorHeader.Size = UDim2.new(1, 0, 0, Compact and 28 or 31)
+    EditorScroll.Position = UDim2.fromOffset(
         1,
-        -22,
-        0,
-        EditorHeight
+        Compact and 29 or 32
+    )
+
+    EditorScroll.Size = UDim2.new(
+        1,
+        -2,
+        1,
+        -(Compact and 30 or 33)
     )
 
     Editor.TextSize = Compact and 10 or 13
+
+    ActionBar.Size = UDim2.new(
+        1,
+        0,
+        0,
+        Compact and 31 or 36
+    )
 
     ExecuteButton.Size = UDim2.fromOffset(
         Compact and 82 or 105,
         Compact and 31 or 36
     )
 
+    ClearButton.Size = UDim2.fromOffset(
+        Compact and 82 or 105,
+        Compact and 31 or 36
+    )
+
     ExecuteButton.TextSize = Compact and 10 or 12
+    ClearButton.TextSize = Compact and 10 or 12
+    ExecutionStatus.TextSize = Compact and 8 or 9
+
+    OutputCard.Size = UDim2.new(
+        1,
+        0,
+        0,
+        Compact and 125 or 145
+    )
+
+    OutputHeader.Size = UDim2.new(
+        1,
+        0,
+        0,
+        Compact and 28 or 31
+    )
+
+    OutputScroll.Position = UDim2.fromOffset(
+        1,
+        Compact and 29 or 32
+    )
+
+    OutputScroll.Size = UDim2.new(
+        1,
+        -2,
+        1,
+        -(Compact and 30 or 33)
+    )
+
+    Output.TextSize = Compact and 8 or 10
+    EditorTitle.TextSize = Compact and 8 or 9
+    LineCount.TextSize = Compact and 8 or 9
+    OutputTitle.TextSize = Compact and 8 or 9
+    OutputStatus.TextSize = Compact and 8 or 9
 
     SettingsTitle.Position = UDim2.fromOffset(14, 11)
     SettingsTitle.TextSize = Compact and 16 or 20
@@ -1152,6 +1603,8 @@ local function UpdateLayout()
     task.defer(function()
         UpdateExecutionScroll()
         UpdateSettingsScroll()
+        EditorScrollUpdate()
+        OutputScrollUpdate()
     end)
 end
 
@@ -1485,6 +1938,18 @@ ExecuteButton.MouseLeave:Connect(function()
     })
 end)
 
+ClearButton.MouseEnter:Connect(function()
+    Tween(ClearButton, 0.15, {
+        BackgroundColor3 = Config.Colors.Border
+    })
+end)
+
+ClearButton.MouseLeave:Connect(function()
+    Tween(ClearButton, 0.15, {
+        BackgroundColor3 = Config.Colors.SurfaceLight
+    })
+end)
+
 ExecutionButton.MouseEnter:Connect(function()
     if CurrentPage == "Execution" then
         Tween(ExecutionButton, 0.15, {
@@ -1564,6 +2029,7 @@ SettingsButton.MouseButton1Click:Connect(function()
     SwitchPage("Settings")
 end)
 
+UpdateLineCount()
 UpdateLayout()
 UpdateMiniButtonPosition()
 
