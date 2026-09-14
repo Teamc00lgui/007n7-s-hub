@@ -6,7 +6,7 @@
 
 007n7's hub is a Luau-based GUI project created by **x_c00lkidd_x**.
 
-The project focuses on a customizable in-game interface with different tools.
+The project focuses on a customizable in-game interface with a executor tool.
 
 ## Screenshots
 
