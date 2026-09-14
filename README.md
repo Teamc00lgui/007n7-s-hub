@@ -46,6 +46,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/Teamc00lgui/007n7-s-h
 ## Credits
 
 - Created and maintained by **x_c00lkidd_x**.
+- Integration with **ScriptBlox**.
 
 _Please give credit if you repost or modify the project._
 
