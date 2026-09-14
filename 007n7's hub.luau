@@ -1048,23 +1048,24 @@ AddCorner(CoreGuardRecover, 8)
 AddStroke(CoreGuardRecover, Config.Colors.Border, 1, 0.2)
 
 local function UpdateCoreGuardStatus()
-    local Status = CoreGuard:GetStatus()
     local UsingCoreGui = CoreGuard:IsUsingCoreGui()
     local MonitorActive = CoreGuard.MonitorConnection ~= nil
+    local Enabled = CoreGuard.Initialized and CoreGuard:IsMounted()
 
-    CoreGuardStatus.Text = "Status: " .. Status
+    CoreGuardStatus.Text = "Status: " .. (Enabled and "Enabled" or "Disabled")
     CoreGuardContainer.Text = "Container: " .. (UsingCoreGui and "CoreGui" or "PlayerGui")
     CoreGuardMonitor.Text = "Monitor: " .. (MonitorActive and "Active" or "Inactive")
 
-    if Status == "CoreGui" then
+    if Enabled then
         CoreGuardStatus.TextColor3 = Config.Colors.Accent
-        CoreGuardContainer.TextColor3 = Config.Colors.Accent
-    elseif Status == "PlayerGui" then
-        CoreGuardStatus.TextColor3 = Config.Colors.SecondaryText
-        CoreGuardContainer.TextColor3 = Config.Colors.SecondaryText
     else
         CoreGuardStatus.TextColor3 = Config.Colors.MutedText
-        CoreGuardContainer.TextColor3 = Config.Colors.MutedText
+    end
+
+    if UsingCoreGui then
+        CoreGuardContainer.TextColor3 = Config.Colors.Accent
+    else
+        CoreGuardContainer.TextColor3 = Config.Colors.SecondaryText
     end
 
     CoreGuardMonitor.TextColor3 = MonitorActive
