@@ -68,11 +68,11 @@ local Config = {
     Version = "0.1.0",
     Creator = "x_c00lkidd_x",
 
-    DesktopSize = Vector2.new(900, 560),
-    MobileWidthScale = 0.9,
-    MobileHeightScale = 0.78,
+    DesktopSize = Vector2.new(620, 400),
+    MobileWidthScale = 0.88,
+    MobileHeightScale = 0.68,
 
-    MinimizedSize = 36,
+    MinimizedSize = 30,
 
     Colors = {
         Background = Color3.fromRGB(13, 15, 18),
@@ -92,6 +92,8 @@ local ExistingGui = CoreGui:FindFirstChild("007n7sHub")
 if ExistingGui then
     ExistingGui:Destroy()
 end
+
+local Camera = Workspace.CurrentCamera
 
 local function Create(ClassName, Properties)
     local Object = Instance.new(ClassName)
@@ -135,6 +137,27 @@ local function AddStroke(Object, Color, Thickness, Transparency)
     })
 end
 
+local function IsMobile()
+    return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
+local function GetWindowSize()
+    if not Camera then
+        return Config.DesktopSize
+    end
+
+    local Viewport = Camera.ViewportSize
+
+    if IsMobile() then
+        return Vector2.new(
+            math.floor(Viewport.X * Config.MobileWidthScale),
+            math.floor(Viewport.Y * Config.MobileHeightScale)
+        )
+    end
+
+    return Config.DesktopSize
+end
+
 local ScreenGui = Create("ScreenGui", {
     Name = "007n7sHub",
     ResetOnSpawn = false,
@@ -143,9 +166,11 @@ local ScreenGui = Create("ScreenGui", {
     Parent = CoreGui
 })
 
+local InitialSize = GetWindowSize()
+
 local Window = Create("Frame", {
     Name = "Window",
-    Size = UDim2.fromOffset(Config.DesktopSize.X, Config.DesktopSize.Y),
+    Size = UDim2.fromOffset(InitialSize.X, InitialSize.Y),
     Position = UDim2.fromScale(0.5, 0.5),
     AnchorPoint = Vector2.new(0.5, 0.5),
     BackgroundColor3 = Config.Colors.Background,
@@ -154,7 +179,7 @@ local Window = Create("Frame", {
     Parent = ScreenGui
 })
 
-AddCorner(Window, 16)
+AddCorner(Window, 14)
 AddStroke(Window, Config.Colors.Border, 1, 0.15)
 
 local WindowScale = Create("UIScale", {
@@ -162,20 +187,37 @@ local WindowScale = Create("UIScale", {
     Parent = Window
 })
 
+local Shadow = Create("ImageLabel", {
+    Name = "Shadow",
+    Size = UDim2.new(1, 36, 1, 36),
+    Position = UDim2.fromScale(0.5, 0.5),
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    BackgroundTransparency = 1,
+    Image = "rbxassetid://6014261993",
+    ImageColor3 = Color3.fromRGB(0, 0, 0),
+    ImageTransparency = 0.45,
+    ScaleType = Enum.ScaleType.Slice,
+    SliceCenter = Rect.new(49, 49, 450, 450),
+    ZIndex = 0,
+    Parent = Window
+})
+
+Window.ZIndex = 2
+
 local TitleBar = Create("Frame", {
     Name = "TitleBar",
-    Size = UDim2.new(1, 0, 0, 58),
+    Size = UDim2.new(1, 0, 0, 50),
     BackgroundColor3 = Config.Colors.Accent,
     BorderSizePixel = 0,
     ZIndex = 5,
     Parent = Window
 })
 
-AddCorner(TitleBar, 16)
+AddCorner(TitleBar, 14)
 
 local TitleBarCover = Create("Frame", {
-    Size = UDim2.new(1, 0, 0, 18),
-    Position = UDim2.new(0, 0, 1, -18),
+    Size = UDim2.new(1, 0, 0, 16),
+    Position = UDim2.new(0, 0, 1, -16),
     BackgroundColor3 = Config.Colors.Accent,
     BorderSizePixel = 0,
     ZIndex = 5,
@@ -184,75 +226,73 @@ local TitleBarCover = Create("Frame", {
 
 local Title = Create("TextLabel", {
     Name = "Title",
-    Size = UDim2.new(1, -150, 0, 26),
-    Position = UDim2.fromOffset(20, 8),
+    Size = UDim2.new(1, -120, 0, 23),
+    Position = UDim2.fromOffset(16, 6),
     BackgroundTransparency = 1,
     Text = Config.Name,
     TextColor3 = Color3.fromRGB(255, 255, 255),
-    TextSize = 18,
+    TextSize = 17,
     Font = Enum.Font.GothamBold,
     TextXAlignment = Enum.TextXAlignment.Left,
-    TextTruncate = Enum.TextTruncate.AtEnd,
     ZIndex = 6,
     Parent = TitleBar
 })
 
 local Subtitle = Create("TextLabel", {
     Name = "Subtitle",
-    Size = UDim2.new(1, -150, 0, 16),
-    Position = UDim2.fromOffset(21, 32),
+    Size = UDim2.new(1, -120, 0, 14),
+    Position = UDim2.fromOffset(17, 28),
     BackgroundTransparency = 1,
     Text = "Luau execution environment",
     TextColor3 = Color3.fromRGB(225, 245, 255),
     TextTransparency = 0.15,
-    TextSize = 11,
+    TextSize = 10,
     Font = Enum.Font.Gotham,
     TextXAlignment = Enum.TextXAlignment.Left,
-    TextTruncate = Enum.TextTruncate.AtEnd,
     ZIndex = 6,
     Parent = TitleBar
 })
 
 local MinimizeButton = Create("TextButton", {
     Name = "MinimizeButton",
-    Size = UDim2.fromOffset(38, 38),
-    Position = UDim2.new(1, -86, 0.5, -19),
+    Size = UDim2.fromOffset(32, 32),
+    Position = UDim2.new(1, -72, 0.5, -16),
     BackgroundColor3 = Color3.fromRGB(255, 255, 255),
     BackgroundTransparency = 0.88,
     BorderSizePixel = 0,
     AutoButtonColor = false,
     Text = "—",
     TextColor3 = Color3.fromRGB(255, 255, 255),
-    TextSize = 18,
+    TextSize = 16,
     Font = Enum.Font.GothamBold,
     ZIndex = 7,
     Parent = TitleBar
 })
 
-AddCorner(MinimizeButton, 10)
+AddCorner(MinimizeButton, 9)
 
 local CloseButton = Create("TextButton", {
     Name = "CloseButton",
-    Size = UDim2.fromOffset(38, 38),
-    Position = UDim2.new(1, -44, 0.5, -19),
+    Size = UDim2.fromOffset(32, 32),
+    Position = UDim2.new(1, -38, 0.5, -16),
     BackgroundColor3 = Color3.fromRGB(255, 255, 255),
     BackgroundTransparency = 0.88,
     BorderSizePixel = 0,
     AutoButtonColor = false,
     Text = "×",
     TextColor3 = Color3.fromRGB(255, 255, 255),
-    TextSize = 21,
+    TextSize = 19,
     Font = Enum.Font.GothamBold,
     ZIndex = 7,
     Parent = TitleBar
 })
 
-AddCorner(CloseButton, 10)
+AddCorner(CloseButton, 9)
 
 local Content = Create("Frame", {
     Name = "Content",
-    Size = UDim2.new(1, 0, 1, -58),
-    Position = UDim2.fromOffset(0, 58),
+    Size = UDim2.new(1, 0, 1, -50),
+    Position = UDim2.fromOffset(0, 50),
     BackgroundColor3 = Config.Colors.Background,
     BorderSizePixel = 0,
     ZIndex = 3,
@@ -261,78 +301,85 @@ local Content = Create("Frame", {
 
 local Sidebar = Create("Frame", {
     Name = "Sidebar",
-    Size = UDim2.new(0, 165, 1, 0),
+    Size = UDim2.new(0, 135, 1, 0),
     BackgroundColor3 = Config.Colors.Surface,
     BorderSizePixel = 0,
     ZIndex = 4,
     Parent = Content
 })
 
+local SidebarPadding = Create("UIPadding", {
+    PaddingTop = UDim.new(0, 12),
+    PaddingLeft = UDim.new(0, 8),
+    PaddingRight = UDim.new(0, 8),
+    Parent = Sidebar
+})
+
 local Navigation = Create("Frame", {
     Name = "Navigation",
-    Size = UDim2.new(1, -24, 0, 100),
-    Position = UDim2.fromOffset(12, 18),
+    Size = UDim2.new(1, 0, 0, 82),
     BackgroundTransparency = 1,
     Parent = Sidebar
 })
 
 local NavigationLayout = Create("UIListLayout", {
-    Padding = UDim.new(0, 6),
+    Padding = UDim.new(0, 5),
     SortOrder = Enum.SortOrder.LayoutOrder,
     Parent = Navigation
 })
 
 local ExecutionButton = Create("TextButton", {
     Name = "Execution",
-    Size = UDim2.new(1, 0, 0, 44),
+    Size = UDim2.new(1, 0, 0, 38),
     BackgroundColor3 = Config.Colors.Accent,
+    BackgroundTransparency = 0,
     BorderSizePixel = 0,
     AutoButtonColor = false,
     Text = "Execution",
     TextColor3 = Color3.fromRGB(255, 255, 255),
-    TextSize = 14,
+    TextSize = 13,
     Font = Enum.Font.GothamMedium,
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = Navigation
 })
 
-AddCorner(ExecutionButton, 10)
+AddCorner(ExecutionButton, 9)
 
 Create("UIPadding", {
-    PaddingLeft = UDim.new(0, 14),
+    PaddingLeft = UDim.new(0, 11),
     Parent = ExecutionButton
 })
 
 local SettingsButton = Create("TextButton", {
     Name = "Settings",
-    Size = UDim2.new(1, 0, 0, 44),
+    Size = UDim2.new(1, 0, 0, 38),
     BackgroundColor3 = Config.Colors.Surface,
     BackgroundTransparency = 1,
     BorderSizePixel = 0,
     AutoButtonColor = false,
     Text = "Settings",
     TextColor3 = Config.Colors.SecondaryText,
-    TextSize = 14,
+    TextSize = 13,
     Font = Enum.Font.GothamMedium,
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = Navigation
 })
 
-AddCorner(SettingsButton, 10)
+AddCorner(SettingsButton, 9)
 
 Create("UIPadding", {
-    PaddingLeft = UDim.new(0, 14),
+    PaddingLeft = UDim.new(0, 11),
     Parent = SettingsButton
 })
 
 local Creator = Create("TextLabel", {
     Name = "Creator",
-    Size = UDim2.new(1, -24, 0, 40),
-    Position = UDim2.new(0, 12, 1, -55),
+    Size = UDim2.new(1, -16, 0, 35),
+    Position = UDim2.new(0, 8, 1, -47),
     BackgroundTransparency = 1,
     Text = "Made by x_c00lkidd_x",
     TextColor3 = Config.Colors.MutedText,
-    TextSize = 10,
+    TextSize = 9,
     Font = Enum.Font.Gotham,
     TextWrapped = true,
     TextXAlignment = Enum.TextXAlignment.Left,
@@ -341,8 +388,8 @@ local Creator = Create("TextLabel", {
 
 local MainArea = Create("Frame", {
     Name = "MainArea",
-    Size = UDim2.new(1, -165, 1, 0),
-    Position = UDim2.fromOffset(165, 0),
+    Size = UDim2.new(1, -135, 1, 0),
+    Position = UDim2.fromOffset(135, 0),
     BackgroundTransparency = 1,
     Parent = Content
 })
@@ -355,24 +402,24 @@ local ExecutionPage = Create("Frame", {
 })
 
 local PageTitle = Create("TextLabel", {
-    Size = UDim2.new(1, -40, 0, 30),
-    Position = UDim2.fromOffset(20, 20),
+    Size = UDim2.new(1, -32, 0, 26),
+    Position = UDim2.fromOffset(16, 14),
     BackgroundTransparency = 1,
     Text = "Execution",
     TextColor3 = Config.Colors.Text,
-    TextSize = 22,
+    TextSize = 20,
     Font = Enum.Font.GothamBold,
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = ExecutionPage
 })
 
 local PageDescription = Create("TextLabel", {
-    Size = UDim2.new(1, -40, 0, 22),
-    Position = UDim2.fromOffset(20, 49),
+    Size = UDim2.new(1, -32, 0, 18),
+    Position = UDim2.fromOffset(16, 39),
     BackgroundTransparency = 1,
     Text = "Write and execute Luau code.",
     TextColor3 = Config.Colors.SecondaryText,
-    TextSize = 12,
+    TextSize = 11,
     Font = Enum.Font.Gotham,
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = ExecutionPage
@@ -380,8 +427,8 @@ local PageDescription = Create("TextLabel", {
 
 local Editor = Create("TextBox", {
     Name = "Editor",
-    Size = UDim2.new(1, -40, 1, -125),
-    Position = UDim2.fromOffset(20, 82),
+    Size = UDim2.new(1, -32, 1, -116),
+    Position = UDim2.fromOffset(16, 68),
     BackgroundColor3 = Color3.fromRGB(10, 12, 15),
     BorderSizePixel = 0,
     ClearTextOnFocus = false,
@@ -390,7 +437,7 @@ local Editor = Create("TextBox", {
     PlaceholderText = "Enter Luau code...",
     PlaceholderColor3 = Color3.fromRGB(75, 80, 90),
     TextColor3 = Config.Colors.Text,
-    TextSize = 14,
+    TextSize = 13,
     Font = Enum.Font.Code,
     TextXAlignment = Enum.TextXAlignment.Left,
     TextYAlignment = Enum.TextYAlignment.Top,
@@ -398,32 +445,32 @@ local Editor = Create("TextBox", {
     Parent = ExecutionPage
 })
 
-AddCorner(Editor, 12)
+AddCorner(Editor, 10)
 AddStroke(Editor, Config.Colors.Border, 1, 0.25)
 
 Create("UIPadding", {
-    PaddingTop = UDim.new(0, 14),
-    PaddingBottom = UDim.new(0, 14),
-    PaddingLeft = UDim.new(0, 14),
-    PaddingRight = UDim.new(0, 14),
+    PaddingTop = UDim.new(0, 11),
+    PaddingBottom = UDim.new(0, 11),
+    PaddingLeft = UDim.new(0, 11),
+    PaddingRight = UDim.new(0, 11),
     Parent = Editor
 })
 
 local ExecuteButton = Create("TextButton", {
     Name = "Execute",
-    Size = UDim2.fromOffset(120, 40),
-    Position = UDim2.new(1, -140, 1, -58),
+    Size = UDim2.fromOffset(105, 36),
+    Position = UDim2.new(1, -121, 1, -48),
     BackgroundColor3 = Config.Colors.Accent,
     BorderSizePixel = 0,
     AutoButtonColor = false,
     Text = "Execute",
     TextColor3 = Color3.fromRGB(255, 255, 255),
-    TextSize = 13,
+    TextSize = 12,
     Font = Enum.Font.GothamBold,
     Parent = ExecutionPage
 })
 
-AddCorner(ExecuteButton, 10)
+AddCorner(ExecuteButton, 9)
 
 local SettingsPage = Create("Frame", {
     Name = "SettingsPage",
@@ -434,261 +481,80 @@ local SettingsPage = Create("Frame", {
 })
 
 local SettingsTitle = Create("TextLabel", {
-    Size = UDim2.new(1, -40, 0, 30),
-    Position = UDim2.fromOffset(20, 20),
+    Size = UDim2.new(1, -32, 0, 26),
+    Position = UDim2.fromOffset(16, 14),
     BackgroundTransparency = 1,
     Text = "Settings",
     TextColor3 = Config.Colors.Text,
-    TextSize = 22,
+    TextSize = 20,
     Font = Enum.Font.GothamBold,
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = SettingsPage
 })
 
 local SettingsDescription = Create("TextLabel", {
-    Size = UDim2.new(1, -40, 0, 22),
-    Position = UDim2.fromOffset(20, 49),
+    Size = UDim2.new(1, -32, 0, 18),
+    Position = UDim2.fromOffset(16, 39),
     BackgroundTransparency = 1,
     Text = "Configure your 007n7's hub experience.",
     TextColor3 = Config.Colors.SecondaryText,
-    TextSize = 12,
+    TextSize = 11,
     Font = Enum.Font.Gotham,
     TextXAlignment = Enum.TextXAlignment.Left,
-    TextTruncate = Enum.TextTruncate.AtEnd,
     Parent = SettingsPage
 })
 
 local AboutCard = Create("Frame", {
     Name = "AboutCard",
-    Size = UDim2.new(1, -40, 0, 125),
-    Position = UDim2.fromOffset(20, 90),
+    Size = UDim2.new(1, -32, 0, 110),
+    Position = UDim2.fromOffset(16, 70),
     BackgroundColor3 = Config.Colors.Surface,
     BorderSizePixel = 0,
     Parent = SettingsPage
 })
 
-AddCorner(AboutCard, 12)
+AddCorner(AboutCard, 10)
 AddStroke(AboutCard, Config.Colors.Border, 1, 0.35)
 
 local AboutTitle = Create("TextLabel", {
-    Size = UDim2.new(1, -28, 0, 24),
-    Position = UDim2.fromOffset(14, 14),
+    Size = UDim2.new(1, -24, 0, 22),
+    Position = UDim2.fromOffset(12, 12),
     BackgroundTransparency = 1,
     Text = Config.Name,
     TextColor3 = Config.Colors.Text,
-    TextSize = 15,
+    TextSize = 14,
     Font = Enum.Font.GothamBold,
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = AboutCard
 })
 
 local AboutVersion = Create("TextLabel", {
-    Size = UDim2.new(1, -28, 0, 20),
-    Position = UDim2.fromOffset(14, 42),
+    Size = UDim2.new(1, -24, 0, 18),
+    Position = UDim2.fromOffset(12, 38),
     BackgroundTransparency = 1,
     Text = "Version " .. Config.Version,
     TextColor3 = Config.Colors.SecondaryText,
-    TextSize = 12,
+    TextSize = 11,
     Font = Enum.Font.Gotham,
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = AboutCard
 })
 
 local AboutCreator = Create("TextLabel", {
-    Size = UDim2.new(1, -28, 0, 20),
-    Position = UDim2.fromOffset(14, 68),
+    Size = UDim2.new(1, -24, 0, 18),
+    Position = UDim2.fromOffset(12, 62),
     BackgroundTransparency = 1,
     Text = "Made by " .. Config.Creator,
     TextColor3 = Config.Colors.SecondaryText,
-    TextSize = 12,
+    TextSize = 11,
     Font = Enum.Font.Gotham,
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = AboutCard
 })
 
-local MiniButton = Create("TextButton", {
-    Name = "ReopenButton",
-    Size = UDim2.fromOffset(Config.MinimizedSize, Config.MinimizedSize),
-    Position = UDim2.fromOffset(14, 14),
-    BackgroundColor3 = Config.Colors.Accent,
-    BorderSizePixel = 0,
-    AutoButtonColor = false,
-    Text = "7",
-    TextColor3 = Color3.fromRGB(255, 255, 255),
-    TextSize = 16,
-    Font = Enum.Font.GothamBold,
-    Visible = false,
-    Parent = ScreenGui
-})
-
-AddCorner(MiniButton, 10)
-
 local Dragging = false
 local DragStart
 local StartPosition
-
-local function IsMobile()
-    return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-end
-
-local function UpdateLayout()
-    local Camera = Workspace.CurrentCamera
-
-    if not Camera then
-        return
-    end
-
-    local Viewport = Camera.ViewportSize
-    local Mobile = IsMobile()
-
-    if Mobile then
-        Window.Size = UDim2.fromOffset(
-            math.floor(Viewport.X * Config.MobileWidthScale),
-            math.floor(Viewport.Y * Config.MobileHeightScale)
-        )
-
-        TitleBar.Size = UDim2.new(1, 0, 0, 48)
-        TitleBarCover.Size = UDim2.new(1, 0, 0, 16)
-        TitleBarCover.Position = UDim2.new(0, 0, 1, -16)
-
-        Title.Position = UDim2.fromOffset(14, 6)
-        Title.Size = UDim2.new(1, -105, 0, 22)
-        Title.TextSize = 15
-
-        Subtitle.Position = UDim2.fromOffset(15, 26)
-        Subtitle.Size = UDim2.new(1, -105, 0, 14)
-        Subtitle.TextSize = 9
-
-        MinimizeButton.Size = UDim2.fromOffset(30, 30)
-        MinimizeButton.Position = UDim2.new(1, -68, 0.5, -15)
-
-        CloseButton.Size = UDim2.fromOffset(30, 30)
-        CloseButton.Position = UDim2.new(1, -35, 0.5, -15)
-        CloseButton.TextSize = 18
-
-        Content.Position = UDim2.fromOffset(0, 48)
-        Content.Size = UDim2.new(1, 0, 1, -48)
-
-        Sidebar.Size = UDim2.new(0, 112, 1, 0)
-
-        Navigation.Size = UDim2.new(1, -12, 0, 92)
-        Navigation.Position = UDim2.fromOffset(6, 12)
-
-        ExecutionButton.Size = UDim2.new(1, 0, 0, 40)
-        SettingsButton.Size = UDim2.new(1, 0, 0, 40)
-
-        ExecutionButton.TextSize = 11
-        SettingsButton.TextSize = 11
-
-        ExecutionButton.TextXAlignment = Enum.TextXAlignment.Center
-        SettingsButton.TextXAlignment = Enum.TextXAlignment.Center
-
-        Creator.Visible = false
-
-        MainArea.Position = UDim2.fromOffset(112, 0)
-        MainArea.Size = UDim2.new(1, -112, 1, 0)
-
-        PageTitle.Position = UDim2.fromOffset(14, 14)
-        PageTitle.Size = UDim2.new(1, -28, 0, 26)
-        PageTitle.TextSize = 18
-
-        PageDescription.Position = UDim2.fromOffset(14, 39)
-        PageDescription.Size = UDim2.new(1, -28, 0, 18)
-        PageDescription.TextSize = 10
-
-        Editor.Position = UDim2.fromOffset(14, 65)
-        Editor.Size = UDim2.new(1, -28, 1, -116)
-        Editor.TextSize = 12
-
-        ExecuteButton.Size = UDim2.fromOffset(92, 34)
-        ExecuteButton.Position = UDim2.new(1, -106, 1, -45)
-        ExecuteButton.TextSize = 11
-
-        SettingsTitle.Position = UDim2.fromOffset(14, 14)
-        SettingsTitle.Size = UDim2.new(1, -28, 0, 26)
-        SettingsTitle.TextSize = 18
-
-        SettingsDescription.Position = UDim2.fromOffset(14, 39)
-        SettingsDescription.Size = UDim2.new(1, -28, 0, 18)
-        SettingsDescription.TextSize = 10
-
-        AboutCard.Position = UDim2.fromOffset(14, 70)
-        AboutCard.Size = UDim2.new(1, -28, 0, 110)
-    else
-        Window.Size = UDim2.fromOffset(
-            Config.DesktopSize.X,
-            Config.DesktopSize.Y
-        )
-
-        TitleBar.Size = UDim2.new(1, 0, 0, 58)
-        TitleBarCover.Size = UDim2.new(1, 0, 0, 18)
-        TitleBarCover.Position = UDim2.new(0, 0, 1, -18)
-
-        Title.Position = UDim2.fromOffset(20, 8)
-        Title.Size = UDim2.new(1, -150, 0, 26)
-        Title.TextSize = 18
-
-        Subtitle.Position = UDim2.fromOffset(21, 32)
-        Subtitle.Size = UDim2.new(1, -150, 0, 16)
-        Subtitle.TextSize = 11
-
-        MinimizeButton.Size = UDim2.fromOffset(38, 38)
-        MinimizeButton.Position = UDim2.new(1, -86, 0.5, -19)
-
-        CloseButton.Size = UDim2.fromOffset(38, 38)
-        CloseButton.Position = UDim2.new(1, -44, 0.5, -19)
-        CloseButton.TextSize = 21
-
-        Content.Position = UDim2.fromOffset(0, 58)
-        Content.Size = UDim2.new(1, 0, 1, -58)
-
-        Sidebar.Size = UDim2.new(0, 165, 1, 0)
-
-        Navigation.Size = UDim2.new(1, -24, 0, 100)
-        Navigation.Position = UDim2.fromOffset(12, 18)
-
-        ExecutionButton.Size = UDim2.new(1, 0, 0, 44)
-        SettingsButton.Size = UDim2.new(1, 0, 0, 44)
-
-        ExecutionButton.TextSize = 14
-        SettingsButton.TextSize = 14
-
-        ExecutionButton.TextXAlignment = Enum.TextXAlignment.Left
-        SettingsButton.TextXAlignment = Enum.TextXAlignment.Left
-
-        Creator.Visible = true
-
-        MainArea.Position = UDim2.fromOffset(165, 0)
-        MainArea.Size = UDim2.new(1, -165, 1, 0)
-
-        PageTitle.Position = UDim2.fromOffset(20, 20)
-        PageTitle.Size = UDim2.new(1, -40, 0, 30)
-        PageTitle.TextSize = 22
-
-        PageDescription.Position = UDim2.fromOffset(20, 49)
-        PageDescription.Size = UDim2.new(1, -40, 0, 22)
-        PageDescription.TextSize = 12
-
-        Editor.Position = UDim2.fromOffset(20, 82)
-        Editor.Size = UDim2.new(1, -40, 1, -125)
-        Editor.TextSize = 14
-
-        ExecuteButton.Size = UDim2.fromOffset(120, 40)
-        ExecuteButton.Position = UDim2.new(1, -140, 1, -58)
-        ExecuteButton.TextSize = 13
-
-        SettingsTitle.Position = UDim2.fromOffset(20, 20)
-        SettingsTitle.Size = UDim2.new(1, -40, 0, 30)
-        SettingsTitle.TextSize = 22
-
-        SettingsDescription.Position = UDim2.fromOffset(20, 49)
-        SettingsDescription.Size = UDim2.new(1, -40, 0, 22)
-        SettingsDescription.TextSize = 12
-
-        AboutCard.Position = UDim2.fromOffset(20, 90)
-        AboutCard.Size = UDim2.new(1, -40, 0, 125)
-    end
-end
 
 TitleBar.InputBegan:Connect(function(Input)
     if Input.UserInputType == Enum.UserInputType.MouseButton1
@@ -726,6 +592,127 @@ UserInputService.InputChanged:Connect(function(Input)
     )
 end)
 
+local function UpdateLayout()
+    if not Camera then
+        Camera = Workspace.CurrentCamera
+    end
+
+    if not Camera then
+        return
+    end
+
+    local Viewport = Camera.ViewportSize
+    local Mobile = IsMobile()
+
+    local WindowSize
+
+    if Mobile then
+        WindowSize = Vector2.new(
+            math.floor(Viewport.X * Config.MobileWidthScale),
+            math.floor(Viewport.Y * Config.MobileHeightScale)
+        )
+    else
+        WindowSize = Config.DesktopSize
+    end
+
+    Window.Size = UDim2.fromOffset(
+        WindowSize.X,
+        WindowSize.Y
+    )
+
+    local Compact = Mobile or WindowSize.X < 580
+
+    local TitleHeight = Compact and 46 or 50
+    local SidebarWidth = Compact and 105 or 135
+
+    TitleBar.Size = UDim2.new(1, 0, 0, TitleHeight)
+
+    TitleBarCover.Size = UDim2.new(1, 0, 0, 15)
+    TitleBarCover.Position = UDim2.new(0, 0, 1, -15)
+
+    Title.Size = UDim2.new(1, -105, 0, 21)
+    Title.Position = UDim2.fromOffset(13, 5)
+    Title.TextSize = Compact and 14 or 17
+
+    Subtitle.Size = UDim2.new(1, -105, 0, 13)
+    Subtitle.Position = UDim2.fromOffset(14, 25)
+    Subtitle.TextSize = Compact and 8 or 10
+
+    MinimizeButton.Size = UDim2.fromOffset(29, 29)
+    MinimizeButton.Position = UDim2.new(1, -64, 0.5, -14.5)
+    MinimizeButton.TextSize = Compact and 14 or 16
+
+    CloseButton.Size = UDim2.fromOffset(29, 29)
+    CloseButton.Position = UDim2.new(1, -34, 0.5, -14.5)
+    CloseButton.TextSize = Compact and 17 or 19
+
+    Content.Position = UDim2.fromOffset(0, TitleHeight)
+    Content.Size = UDim2.new(1, 0, 1, -TitleHeight)
+
+    Sidebar.Size = UDim2.new(0, SidebarWidth, 1, 0)
+
+    SidebarPadding.PaddingTop = UDim.new(0, 9)
+    SidebarPadding.PaddingLeft = UDim.new(0, 6)
+    SidebarPadding.PaddingRight = UDim.new(0, 6)
+
+    Navigation.Size = UDim2.new(1, 0, 0, 76)
+
+    ExecutionButton.Size = UDim2.new(1, 0, 0, 35)
+    SettingsButton.Size = UDim2.new(1, 0, 0, 35)
+
+    ExecutionButton.TextSize = Compact and 10 or 13
+    SettingsButton.TextSize = Compact and 10 or 13
+
+    MainArea.Position = UDim2.fromOffset(SidebarWidth, 0)
+    MainArea.Size = UDim2.new(1, -SidebarWidth, 1, 0)
+
+    Creator.Size = UDim2.new(1, -12, 0, 30)
+    Creator.Position = UDim2.new(0, 6, 1, -40)
+    Creator.TextSize = Compact and 7 or 9
+
+    PageTitle.Position = UDim2.fromOffset(14, 11)
+    PageTitle.TextSize = Compact and 16 or 20
+
+    PageDescription.Position = UDim2.fromOffset(14, 34)
+    PageDescription.TextSize = Compact and 9 or 11
+
+    Editor.Position = UDim2.fromOffset(14, 58)
+    Editor.Size = UDim2.new(1, -28, 1, -101)
+    Editor.TextSize = Compact and 10 or 13
+
+    ExecuteButton.Size = UDim2.fromOffset(
+        Compact and 82 or 105,
+        Compact and 31 or 36
+    )
+
+    ExecuteButton.Position = UDim2.new(
+        1,
+        -(Compact and 96 or 121),
+        1,
+        -(Compact and 40 or 48)
+    )
+
+    ExecuteButton.TextSize = Compact and 10 or 12
+
+    SettingsTitle.Position = UDim2.fromOffset(14, 11)
+    SettingsTitle.TextSize = Compact and 16 or 20
+
+    SettingsDescription.Position = UDim2.fromOffset(14, 34)
+    SettingsDescription.TextSize = Compact and 9 or 11
+
+    AboutCard.Position = UDim2.fromOffset(14, 58)
+    AboutCard.Size = UDim2.new(1, -28, 0, Compact and 95 or 110)
+
+    AboutTitle.Position = UDim2.fromOffset(11, 10)
+    AboutTitle.TextSize = Compact and 12 or 14
+
+    AboutVersion.Position = UDim2.fromOffset(11, 34)
+    AboutVersion.TextSize = Compact and 9 or 11
+
+    AboutCreator.Position = UDim2.fromOffset(11, 56)
+    AboutCreator.TextSize = Compact and 9 or 11
+end
+
 local function ShowWindow()
     Window.Visible = true
     WindowScale.Scale = 0.92
@@ -744,6 +731,23 @@ local function HideWindow()
         Window.Visible = false
     end)
 end
+
+local MiniButton = Create("TextButton", {
+    Name = "ReopenButton",
+    Size = UDim2.fromOffset(Config.MinimizedSize, Config.MinimizedSize),
+    Position = UDim2.fromOffset(12, 12),
+    BackgroundColor3 = Config.Colors.Accent,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Text = "7",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    Visible = false,
+    Parent = ScreenGui
+})
+
+AddCorner(MiniButton, 9)
 
 CloseButton.MouseEnter:Connect(function()
     Tween(CloseButton, 0.15, {
@@ -781,20 +785,6 @@ ExecuteButton.MouseLeave:Connect(function()
     })
 end)
 
-SettingsButton.MouseEnter:Connect(function()
-    Tween(SettingsButton, 0.15, {
-        BackgroundTransparency = 0.82
-    })
-end)
-
-SettingsButton.MouseLeave:Connect(function()
-    if not SettingsPage.Visible then
-        Tween(SettingsButton, 0.15, {
-            BackgroundTransparency = 1
-        })
-    end
-end)
-
 ExecutionButton.MouseEnter:Connect(function()
     if ExecutionPage.Visible then
         Tween(ExecutionButton, 0.15, {
@@ -811,23 +801,21 @@ ExecutionButton.MouseLeave:Connect(function()
     end
 end)
 
-CloseButton.MouseButton1Click:Connect(function()
-    HideWindow()
-
-    task.delay(0.22, function()
-        MiniButton.Visible = true
-        MiniButton.Size = UDim2.fromOffset(0, 0)
-
-        Tween(MiniButton, 0.25, {
-            Size = UDim2.fromOffset(
-                Config.MinimizedSize,
-                Config.MinimizedSize
-            )
-        })
-    end)
+SettingsButton.MouseEnter:Connect(function()
+    Tween(SettingsButton, 0.15, {
+        BackgroundTransparency = 0.82
+    })
 end)
 
-MinimizeButton.MouseButton1Click:Connect(function()
+SettingsButton.MouseLeave:Connect(function()
+    if not SettingsPage.Visible then
+        Tween(SettingsButton, 0.15, {
+            BackgroundTransparency = 1
+        })
+    end
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
     HideWindow()
 
     task.delay(0.22, function()
@@ -861,6 +849,22 @@ MiniButton.MouseButton1Click:Connect(function()
     }).Completed:Connect(function()
         MiniButton.Visible = false
         ShowWindow()
+    end)
+end)
+
+MinimizeButton.MouseButton1Click:Connect(function()
+    HideWindow()
+
+    task.delay(0.22, function()
+        MiniButton.Visible = true
+        MiniButton.Size = UDim2.fromOffset(0, 0)
+
+        Tween(MiniButton, 0.25, {
+            Size = UDim2.fromOffset(
+                Config.MinimizedSize,
+                Config.MinimizedSize
+            )
+        })
     end)
 end)
 
@@ -903,24 +907,20 @@ SettingsButton.MouseButton1Click:Connect(function()
     })
 end)
 
-local function ConnectViewport()
-    local Camera = Workspace.CurrentCamera
+UpdateLayout()
 
-    if not Camera then
-        return
-    end
-
-    Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-        UpdateLayout()
-    end)
+if Camera then
+    Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateLayout)
 end
 
-ConnectViewport()
-
 Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
-    ConnectViewport()
+    Camera = Workspace.CurrentCamera
+
+    if Camera then
+        Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateLayout)
+    end
+
     UpdateLayout()
 end)
 
-UpdateLayout()
 ShowWindow()
