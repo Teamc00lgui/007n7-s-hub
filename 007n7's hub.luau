@@ -91,6 +91,7 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local Camera = Workspace.CurrentCamera
+local CameraViewportConnection
 
 local function Create(ClassName, Properties)
     local Object = Instance.new(ClassName)
@@ -166,267 +167,17 @@ local ScreenGui = Create("ScreenGui", {
     DisplayOrder = 100
 })
 
-local CoreGuard = {}
-
-CoreGuard.Name = "CoreGuard"
-CoreGuard.GuiName = "007n7sHub"
-CoreGuard.Container = nil
-CoreGuard.UsingCoreGui = false
-CoreGuard.Initialized = false
-CoreGuard.Recovering = false
-CoreGuard.MonitorConnection = nil
-CoreGuard.LastWarning = nil
-
-function CoreGuard:Log(Message)
-    warn("[CoreGuard]: " .. Message)
-end
-
-function CoreGuard:IsAccessible(Object)
-    if not Object then
-        return false
-    end
-
-    local Success = pcall(function()
-        Object:GetChildren()
-    end)
-
-    return Success
-end
-
-function CoreGuard:IsMounted(ScreenGui)
-    if not ScreenGui then
-        return false
-    end
-
-    local Success, Parent = pcall(function()
-        return ScreenGui.Parent
-    end)
-
-    if not Success then
-        return false
-    end
-
-    return Parent == self.Container
-end
-
-function CoreGuard:CanUseCoreGui()
-    return self:IsAccessible(CoreGui)
-end
-
-function CoreGuard:FindExisting(Container)
-    if not self:IsAccessible(Container) then
-        return nil
-    end
-
-    local Success, Existing = pcall(function()
-        return Container:FindFirstChild(self.GuiName)
-    end)
-
-    if not Success then
-        return nil
-    end
-
-    return Existing
-end
-
-function CoreGuard:RemoveExisting(Container, ProtectedGui)
-    local Existing = self:FindExisting(Container)
-
-    if not Existing or Existing == ProtectedGui then
-        return true
-    end
-
-    local Success = pcall(function()
-        Existing:Destroy()
-    end)
-
-    if not Success then
-        self:Log("Failed to remove an existing GUI instance.")
-    end
-
-    return Success
-end
-
-function CoreGuard:PrepareContainer(Container, ScreenGui)
-    if not self:IsAccessible(Container) then
-        return false
-    end
-
-    self:RemoveExisting(Container, ScreenGui)
-
-    return true
-end
-
-function CoreGuard:MountToCoreGui(ScreenGui)
-    if not self:CanUseCoreGui() then
-        return false
-    end
-
-    if not self:PrepareContainer(CoreGui, ScreenGui) then
-        return false
-    end
-
-    local Success = pcall(function()
-        ScreenGui.Parent = CoreGui
-    end)
-
-    if not Success then
-        return false
-    end
-
-    if ScreenGui.Parent ~= CoreGui then
-        return false
-    end
-
-    self.Container = CoreGui
-    self.UsingCoreGui = true
-
-    return true
-end
-
-function CoreGuard:MountToPlayerGui(ScreenGui)
-    if not self:IsAccessible(PlayerGui) then
-        return false
-    end
-
-    if not self:PrepareContainer(PlayerGui, ScreenGui) then
-        return false
-    end
-
-    local Success = pcall(function()
-        ScreenGui.Parent = PlayerGui
-    end)
-
-    if not Success then
-        return false
-    end
-
-    if ScreenGui.Parent ~= PlayerGui then
-        return false
-    end
-
-    self.Container = PlayerGui
-    self.UsingCoreGui = false
-
-    return true
-end
-
-function CoreGuard:Mount(ScreenGui)
-    if self.Initialized then
-        self:Log("Mount request ignored because CoreGuard is already initialized.")
-        return self:IsMounted(ScreenGui)
-    end
-
-    self.Initialized = true
-
-    if self:MountToCoreGui(ScreenGui) then
-        self:Log("CoreGui mounted successfully.")
-        return true
-    end
-
-    self.LastWarning = "CoreGui unavailable."
-
-    self:Log("Error using CoreGui, switching to PlayerGui...")
-
-    if self:MountToPlayerGui(ScreenGui) then
-        self:Log("PlayerGui fallback mounted successfully.")
-        return true
-    end
-
-    self:Log("Critical error: failed to mount GUI.")
-
-    return false
-end
-
-function CoreGuard:Recover(ScreenGui)
-    if self.Recovering then
-        return false
-    end
-
-    self.Recovering = true
-
-    local Recovered = false
-
-    if self.UsingCoreGui then
-        Recovered = self:MountToCoreGui(ScreenGui)
-
-        if not Recovered then
-            self:Log("CoreGui recovery failed, switching to PlayerGui...")
-
-            Recovered = self:MountToPlayerGui(ScreenGui)
-        end
-    else
-        Recovered = self:MountToCoreGui(ScreenGui)
-
-        if Recovered then
-            self:Log("CoreGui became available again.")
-        else
-            Recovered = self:MountToPlayerGui(ScreenGui)
-        end
-    end
-
-    if Recovered then
-        self:Log("GUI recovery completed.")
-    else
-        self:Log("GUI recovery failed.")
-    end
-
-    self.Recovering = false
-
-    return Recovered
-end
-
-function CoreGuard:Monitor(ScreenGui)
-    if self.MonitorConnection then
-        self.MonitorConnection:Disconnect()
-        self.MonitorConnection = nil
-    end
-
-    self.MonitorConnection = ScreenGui.AncestryChanged:Connect(function()
-        if self.Recovering then
-            return
-        end
-
-        task.defer(function()
-            if not self:IsMounted(ScreenGui) then
-                self:Log("GUI mount changed unexpectedly.")
-                self:Recover(ScreenGui)
-            end
-        end)
-    end)
-end
-
-function CoreGuard:GetContainer()
-    return self.Container
-end
-
-function CoreGuard:IsUsingCoreGui()
-    return self.UsingCoreGui
-end
-
-function CoreGuard:GetStatus()
-    if not self.Container then
-        return "Uninitialized"
-    end
-
-    if self.UsingCoreGui then
-        return "CoreGui"
-    end
-
-    return "PlayerGui"
-end
-
-function CoreGuard:Shutdown()
-    if self.MonitorConnection then
-        self.MonitorConnection:Disconnect()
-        self.MonitorConnection = nil
-    end
-
-    self.Container = nil
-    self.UsingCoreGui = false
-    self.Initialized = false
-    self.Recovering = false
-end
+local CoreGuardSource = game:HttpGet(
+    "https://raw.githubusercontent.com/Teamc00lgui/CoreGuard/v0.1.1/CoreGuard.luau"
+)
+
+local CoreGuard = loadstring(CoreGuardSource)()
+
+CoreGuard:Init({
+    Players = Players,
+    CoreGui = CoreGui,
+    RunService = RunService
+})
 
 CoreGuard:Mount(ScreenGui)
 CoreGuard:Monitor(ScreenGui)
@@ -763,7 +514,7 @@ local ExecutionScale = Create("UIScale", {
 
 local PageTitle = Create("TextLabel", {
     Size = UDim2.new(1, -32, 0, 26),
-    Position = UDim2.fromOffset(16, 14),
+    LayoutOrder = 1,
     BackgroundTransparency = 1,
     Text = "Execution",
     TextColor3 = Config.Colors.Text,
@@ -775,7 +526,7 @@ local PageTitle = Create("TextLabel", {
 
 local PageDescription = Create("TextLabel", {
     Size = UDim2.new(1, -32, 0, 18),
-    Position = UDim2.fromOffset(16, 39),
+    LayoutOrder = 2,
     BackgroundTransparency = 1,
     Text = "Write and execute Luau code.",
     TextColor3 = Config.Colors.SecondaryText,
@@ -831,6 +582,35 @@ local ExecuteButton = Create("TextButton", {
 })
 
 AddCorner(ExecuteButton, 9)
+
+ExecuteButton.MouseButton1Click:Connect(function()
+    local Source = Editor.Text
+
+    if Source:match("^%s*$") then
+        return
+    end
+
+    local Loader = loadstring
+
+    if type(Loader) ~= "function" then
+        warn("[007n7's hub]: loadstring is unavailable.")
+        return
+    end
+
+    local Success, Result = pcall(function()
+        local Function, CompileError = Loader(Source)
+
+        if not Function then
+            error(CompileError)
+        end
+
+        return Function()
+    end)
+
+    if not Success then
+        warn("[007n7's hub]: " .. tostring(Result))
+    end
+end)
 
 local SettingsPage = Create("CanvasGroup", {
     Name = "SettingsPage",
@@ -959,7 +739,7 @@ local AboutCreator = Create("TextLabel", {
 
 local CoreGuardCard = Create("Frame", {
     Name = "CoreGuardCard",
-    Size = UDim2.new(1, 0, 0, 172),
+    Size = UDim2.new(1, 0, 0, 190),
     LayoutOrder = 2,
     BackgroundColor3 = Config.Colors.Surface,
     BorderSizePixel = 0,
@@ -1029,6 +809,18 @@ local CoreGuardFallback = Create("TextLabel", {
     Parent = CoreGuardCard
 })
 
+local CoreGuardVersion = Create("TextLabel", {
+    Size = UDim2.new(1, -24, 0, 18),
+    Position = UDim2.fromOffset(12, 120),
+    BackgroundTransparency = 1,
+    Text = "Version " .. CoreGuard.Version,
+    TextColor3 = Config.Colors.SecondaryText,
+    TextSize = 10,
+    Font = Enum.Font.Code,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = CoreGuardCard
+})
+
 local CoreGuardRecover = Create("TextButton", {
     Name = "Recover",
     Size = UDim2.fromOffset(92, 30),
@@ -1049,12 +841,13 @@ AddStroke(CoreGuardRecover, Config.Colors.Border, 1, 0.2)
 
 local function UpdateCoreGuardStatus()
     local UsingCoreGui = CoreGuard:IsUsingCoreGui()
-    local MonitorActive = CoreGuard.MonitorConnection ~= nil
-    local Enabled = CoreGuard.Initialized and CoreGuard:IsMounted()
+    local MonitorActive = CoreGuard:IsMonitoring()
+    local Enabled = CoreGuard:IsEnabled()
 
     CoreGuardStatus.Text = "Status: " .. (Enabled and "Enabled" or "Disabled")
     CoreGuardContainer.Text = "Container: " .. (UsingCoreGui and "CoreGui" or "PlayerGui")
     CoreGuardMonitor.Text = "Monitor: " .. (MonitorActive and "Active" or "Inactive")
+    CoreGuardFallback.Text = "Fallback: " .. (UsingCoreGui and "Ready" or "Active")
 
     if Enabled then
         CoreGuardStatus.TextColor3 = Config.Colors.Accent
@@ -1071,6 +864,10 @@ local function UpdateCoreGuardStatus()
     CoreGuardMonitor.TextColor3 = MonitorActive
         and Config.Colors.Text
         or Config.Colors.MutedText
+
+    CoreGuardFallback.TextColor3 = UsingCoreGui
+        and Config.Colors.SecondaryText
+        or Config.Colors.Accent
 end
 
 CoreGuardRecover.MouseEnter:Connect(function()
@@ -1285,38 +1082,29 @@ local function UpdateLayout()
     Creator.Position = UDim2.new(0, 6, 1, -40)
     Creator.TextSize = Compact and 7 or 9
 
-PageTitle.TextSize = Compact and 16 or 20
-PageDescription.TextSize = Compact and 9 or 11
+    PageTitle.TextSize = Compact and 16 or 20
+    PageDescription.TextSize = Compact and 9 or 11
 
-local EditorHeight = math.max(
-    150,
-    ExecutionScroll.AbsoluteSize.Y - (Compact and 112 or 125)
-)
+    local EditorHeight = math.max(
+        150,
+        ExecutionScroll.AbsoluteSize.Y - (Compact and 112 or 125)
+    )
 
-Editor.Size = UDim2.new(
-    1,
-    -22,
-    0,
-    EditorHeight
-)
+    Editor.Size = UDim2.new(
+        1,
+        -22,
+        0,
+        EditorHeight
+    )
 
-Editor.TextSize = Compact and 10 or 13
+    Editor.TextSize = Compact and 10 or 13
 
-ExecuteButton.Size = UDim2.fromOffset(
-    Compact and 82 or 105,
-    Compact and 31 or 36
-)
+    ExecuteButton.Size = UDim2.fromOffset(
+        Compact and 82 or 105,
+        Compact and 31 or 36
+    )
 
-ExecuteButton.TextSize = Compact and 10 or 12
-
-ExecuteButton.Position = UDim2.new(
-    1,
-    -(Compact and 96 or 121),
-    1,
-    -(Compact and 40 or 48)
-)
-
-ExecuteButton.TextSize = Compact and 10 or 12
+    ExecuteButton.TextSize = Compact and 10 or 12
 
     SettingsTitle.Position = UDim2.fromOffset(14, 11)
     SettingsTitle.TextSize = Compact and 16 or 20
@@ -1325,18 +1113,18 @@ ExecuteButton.TextSize = Compact and 10 or 12
     SettingsDescription.TextSize = Compact and 9 or 11
 
     AboutCard.Size = UDim2.new(
-    1,
-    0,
-    0,
-    Compact and 95 or 110
-)
+        1,
+        0,
+        0,
+        Compact and 95 or 110
+    )
 
     CoreGuardCard.Size = UDim2.new(
-    1,
-    0,
-    0,
-    Compact and 168 or 172
-)
+        1,
+        0,
+        0,
+        Compact and 180 or 190
+    )
 
     AboutTitle.Position = UDim2.fromOffset(11, 10)
     AboutTitle.TextSize = Compact and 12 or 14
@@ -1347,10 +1135,24 @@ ExecuteButton.TextSize = Compact and 10 or 12
     AboutCreator.Position = UDim2.fromOffset(11, 56)
     AboutCreator.TextSize = Compact and 9 or 11
 
-task.defer(function()
-    UpdateExecutionScroll()
-    UpdateSettingsScroll()
-end)
+    CoreGuardTitle.TextSize = Compact and 12 or 14
+    CoreGuardStatus.TextSize = Compact and 9 or 10
+    CoreGuardContainer.TextSize = Compact and 9 or 10
+    CoreGuardMonitor.TextSize = Compact and 9 or 10
+    CoreGuardFallback.TextSize = Compact and 9 or 10
+    CoreGuardVersion.TextSize = Compact and 9 or 10
+
+    CoreGuardRecover.Size = UDim2.fromOffset(
+        Compact and 82 or 92,
+        Compact and 28 or 30
+    )
+
+    CoreGuardRecover.TextSize = Compact and 9 or 10
+
+    task.defer(function()
+        UpdateExecutionScroll()
+        UpdateSettingsScroll()
+    end)
 end
 
 local function CollapseWindow()
@@ -1765,8 +1567,17 @@ end)
 UpdateLayout()
 UpdateMiniButtonPosition()
 
-if Camera then
-    Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+local function ConnectCameraViewport()
+    if CameraViewportConnection then
+        CameraViewportConnection:Disconnect()
+        CameraViewportConnection = nil
+    end
+
+    if not Camera then
+        return
+    end
+
+    CameraViewportConnection = Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
         UpdateLayout()
 
         if MiniButton.Visible then
@@ -1778,18 +1589,11 @@ end
 Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
     Camera = Workspace.CurrentCamera
 
-    if Camera then
-        Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-            UpdateLayout()
-
-            if MiniButton.Visible then
-                UpdateMiniButtonPosition()
-            end
-        end)
-    end
-
+    ConnectCameraViewport()
     UpdateLayout()
     UpdateMiniButtonPosition()
 end)
+
+ConnectCameraViewport()
 
 ShowWindow()
