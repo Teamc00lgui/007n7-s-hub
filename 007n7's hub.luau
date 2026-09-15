@@ -68,7 +68,7 @@ local Config = {
     Version = "0.1.0",
     Creator = "x_c00lkidd_x",
 
-    DesktopSize = Vector2.new(620, 400),
+    DesktopSize = Vector2.new(700, 450),
     MobileWidthScale = 0.88,
     MobileHeightScale = 0.68,
 
